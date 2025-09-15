@@ -3,9 +3,7 @@ import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { Analytics } from "@vercel/analytics/next";
-import { SessionProvider } from "next-auth/react";
-import { trpc } from "../lib/trpc";
-import { Suspense } from "react";
+import { Providers } from "../components/providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -23,13 +21,11 @@ function RootLayout({
   return (
     <html lang="en">
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
-        <Suspense fallback={<div>Loading...</div>}>
-          <SessionProvider>{children}</SessionProvider>
-        </Suspense>
+        <Providers>{children}</Providers>
         <Analytics />
       </body>
     </html>
   );
 }
 
-export default trpc.withTRPC(RootLayout);
+export default RootLayout;
