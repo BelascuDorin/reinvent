@@ -4,42 +4,25 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.time.Instant;
-
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Primary;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.reinvent.TestcontainersConfiguration;
-import com.reinvent.platform.testing.FakeClock;
+import com.reinvent.testsupport.FixedClockConfiguration;
 
 /**
- * Drives the status endpoint through the HTTP boundary. Swapping in a
- * {@link FakeClock} pins the time the endpoint reports, proving it reads the
- * {@link Clock} port rather than the wall clock.
+ * Drives the status endpoint through the HTTP boundary. The shared fixed
+ * {@link Clock} pins the time the endpoint reports, proving it reads the Clock
+ * port rather than the wall clock.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
-@Import(TestcontainersConfiguration.class)
+@Import({ TestcontainersConfiguration.class, FixedClockConfiguration.class })
 class StatusEndpointTests {
-
-	static final Instant FIXED = Instant.parse("2026-07-21T00:00:00Z");
-
-	@TestConfiguration(proxyBeanMethods = false)
-	static class FixedClockConfiguration {
-
-		@Bean
-		@Primary
-		Clock fixedClock() {
-			return new FakeClock(FIXED);
-		}
-	}
 
 	@Autowired
 	MockMvc mvc;
@@ -50,6 +33,6 @@ class StatusEndpointTests {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.service").value("reinvent"))
 				.andExpect(jsonPath("$.status").value("ok"))
-				.andExpect(jsonPath("$.time").value(FIXED.toString()));
+				.andExpect(jsonPath("$.time").value(FixedClockConfiguration.FIXED.toString()));
 	}
 }
