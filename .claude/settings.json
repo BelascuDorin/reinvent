@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh api *)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('\\\\n'.join\\(t['path'] for t in d.get\\('tree',[]\\)\\)\\)\")",
+      "Bash(git commit -q -m 'Set up Matt Pocock engineering skills *)",
+      "Bash(git push *)"
+    ]
+  }
+}
