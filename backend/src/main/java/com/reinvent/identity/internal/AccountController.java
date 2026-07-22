@@ -1,29 +1,25 @@
 package com.reinvent.identity.internal;
 
-import java.util.UUID;
-
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import jakarta.servlet.http.HttpSession;
+import com.reinvent.identity.CurrentUser;
 
 @RestController
 @RequestMapping("/api/accounts")
 class AccountController {
 
 	private final IdentityService identity;
+	private final CurrentUser currentUser;
 
-	AccountController(IdentityService identity) {
+	AccountController(IdentityService identity, CurrentUser currentUser) {
 		this.identity = identity;
+		this.currentUser = currentUser;
 	}
 
 	@GetMapping("/me")
-	AccountState me(HttpSession session) {
-		Object userId = session.getAttribute(SessionAttributes.USER_ID);
-		if (userId == null) {
-			throw new NotAuthenticatedException();
-		}
-		return identity.accountState((UUID) userId);
+	AccountState me() {
+		return identity.accountState(currentUser.requireUserId());
 	}
 }

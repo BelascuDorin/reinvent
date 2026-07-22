@@ -109,6 +109,14 @@ class User {
 		}
 	}
 
+	/**
+	 * Grants the MENTOR role (additive — the User keeps MENTEE). Idempotent, since
+	 * {@code roles} is a set, so a replayed approval event is harmless.
+	 */
+	void grantMentorRole() {
+		roles.add(Role.MENTOR);
+	}
+
 	/** Whether this User is under 18 at the given instant (evaluated in UTC). */
 	boolean isMinorAt(Instant now) {
 		return isMinorAt(dateOfBirth, now);

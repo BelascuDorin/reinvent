@@ -6,12 +6,9 @@ interface Account {
   guardianConsentStatus: string
 }
 
-// useRequestFetch forwards the incoming request's cookies during SSR, so the
-// account renders server-side for a signed-in User. We narrow it to a plain
-// (url) => Promise<unknown> signature: these BFF calls return the backend's
-// contract (which Nuxt can't type anyway), and the full typed-$fetch signature
-// scores every Nitro route, blowing TS's instantiation-depth limit.
-const request = useRequestFetch() as (url: string) => Promise<unknown>
+// useBackendFetch forwards the session cookie during SSR (so the account renders
+// server-side) and is narrowed to sidestep typed-route instantiation-depth limits.
+const request = useBackendFetch()
 const { data: account } = await useAsyncData<Account>('me', () =>
   request('/api/accounts/me') as Promise<Account>,
 )
