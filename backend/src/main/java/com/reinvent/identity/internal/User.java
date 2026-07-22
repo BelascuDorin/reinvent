@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
+import com.reinvent.identity.GuardianConsentStatus;
 import com.reinvent.identity.Role;
 
 import jakarta.persistence.CollectionTable;
@@ -50,16 +51,30 @@ class User {
 	@Column(name = "created_at", nullable = false)
 	private Instant createdAt;
 
+	/**
+	 * This module's projection of where the User stands on Guardian consent. An
+	 * adult is {@link GuardianConsentStatus#NOT_REQUIRED}; a minor starts
+	 * {@link GuardianConsentStatus#PENDING_GUARDIAN_CONSENT} and is flipped to
+	 * {@link GuardianConsentStatus#CONSENTED} when the consent module reports the
+	 * Guardian consented. The consent module owns the consent record; this is only
+	 * the account-state view identity surfaces.
+	 */
+	@Column(name = "guardian_consent_status", nullable = false)
+	@Enumerated(EnumType.STRING)
+	private GuardianConsentStatus guardianConsentStatus;
+
 	protected User() {
 		// for JPA
 	}
 
-	User(UUID id, String email, String passwordHash, LocalDate dateOfBirth, Instant createdAt) {
+	User(UUID id, String email, String passwordHash, LocalDate dateOfBirth, Instant createdAt,
+			GuardianConsentStatus guardianConsentStatus) {
 		this.id = id;
 		this.email = email;
 		this.passwordHash = passwordHash;
 		this.dateOfBirth = dateOfBirth;
 		this.createdAt = createdAt;
+		this.guardianConsentStatus = guardianConsentStatus;
 		this.roles.add(Role.MENTEE); // everyone is a Mentee by default
 	}
 
@@ -79,8 +94,28 @@ class User {
 		return Set.copyOf(roles);
 	}
 
+	GuardianConsentStatus guardianConsentStatus() {
+		return guardianConsentStatus;
+	}
+
+	/**
+	 * Records that the Guardian has consented, lifting the pending gate. A no-op
+	 * for a User who is not (or no longer) awaiting consent, so a late or duplicate
+	 * grant event can never regress {@code NOT_REQUIRED} or re-open a settled state.
+	 */
+	void markGuardianConsented() {
+		if (guardianConsentStatus == GuardianConsentStatus.PENDING_GUARDIAN_CONSENT) {
+			guardianConsentStatus = GuardianConsentStatus.CONSENTED;
+		}
+	}
+
 	/** Whether this User is under 18 at the given instant (evaluated in UTC). */
 	boolean isMinorAt(Instant now) {
+		return isMinorAt(dateOfBirth, now);
+	}
+
+	/** Whether someone born on {@code dateOfBirth} is under 18 at {@code now} (UTC). */
+	static boolean isMinorAt(LocalDate dateOfBirth, Instant now) {
 		LocalDate today = LocalDate.ofInstant(now, ZoneOffset.UTC);
 		return dateOfBirth.plusYears(18).isAfter(today);
 	}

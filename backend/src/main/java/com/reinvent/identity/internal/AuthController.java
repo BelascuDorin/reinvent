@@ -26,7 +26,8 @@ class AuthController {
 	@PostMapping("/signup")
 	@ResponseStatus(HttpStatus.CREATED)
 	AccountState signUp(@RequestBody @Valid SignupRequest request) {
-		UUID userId = identity.signUp(request.email(), request.password(), request.dateOfBirth());
+		UUID userId = identity.signUp(request.email(), request.password(), request.dateOfBirth(),
+				request.guardianName(), request.guardianEmail());
 		return identity.accountState(userId);
 	}
 

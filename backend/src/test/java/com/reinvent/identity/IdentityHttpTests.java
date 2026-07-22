@@ -42,11 +42,25 @@ class IdentityHttpTests {
 	}
 
 	@Test
-	void signupOfAMinorIsPendingGuardianConsent() throws Exception {
-		mvc.perform(signup("minor@example.com", "password1", "2015-01-01"))
+	void signupOfAMinorWhoNamesAGuardianIsPendingConsent() throws Exception {
+		mvc.perform(signupMinor("minor@example.com", "password1", "2015-01-01", "Pat Guardian",
+				"guardian@example.com"))
 				.andExpect(status().isCreated())
 				.andExpect(jsonPath("$.minor").value(true))
 				.andExpect(jsonPath("$.guardianConsentStatus").value("PENDING_GUARDIAN_CONSENT"));
+	}
+
+	@Test
+	void signupOfAMinorWithoutAGuardianIsRejected() throws Exception {
+		mvc.perform(signup("lonely-minor@example.com", "password1", "2015-01-01"))
+				.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void signupOfAnAdultNamingAGuardianIsRejected() throws Exception {
+		mvc.perform(signupMinor("adult-guardian@example.com", "password1", "1990-01-01", "Pat Guardian",
+				"guardian@example.com"))
+				.andExpect(status().isBadRequest());
 	}
 
 	@Test
@@ -102,6 +116,14 @@ class IdentityHttpTests {
 				.content("""
 						{"email":"%s","password":"%s","dateOfBirth":"%s"}
 						""".formatted(email, password, dateOfBirth));
+	}
+
+	private static org.springframework.test.web.servlet.RequestBuilder signupMinor(String email, String password,
+			String dateOfBirth, String guardianName, String guardianEmail) {
+		return post("/api/auth/signup").contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"email":"%s","password":"%s","dateOfBirth":"%s","guardianName":"%s","guardianEmail":"%s"}
+						""".formatted(email, password, dateOfBirth, guardianName, guardianEmail));
 	}
 
 	private static org.springframework.test.web.servlet.RequestBuilder login(String email, String password) {
