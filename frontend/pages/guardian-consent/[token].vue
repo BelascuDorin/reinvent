@@ -10,9 +10,13 @@ const route = useRoute()
 const token = route.params.token as string
 
 // The Guardian is not a User and has no session; this is a public page keyed only
-// by the link token. Resolve its context server-side.
-const { data: context, error: loadError } = await useAsyncData(`consent-${token}`, () =>
-  $fetch(`/api/consent/${token}`) as Promise<ConsentContext>,
+// by the link token. Resolve its context server-side. $fetch is narrowed to a
+// plain (url) => Promise<unknown>: the full typed-$fetch signature scores every
+// Nitro route and blows TS's instantiation-depth limit (the BFF contract is the
+// backend's, which Nuxt can't type anyway).
+const backendFetch = $fetch as (url: string) => Promise<unknown>
+const { data: context, error: loadError } = await useAsyncData<ConsentContext>(`consent-${token}`, () =>
+  backendFetch(`/api/consent/${token}`) as Promise<ConsentContext>,
 )
 
 const confirmGuardian = ref(false)
