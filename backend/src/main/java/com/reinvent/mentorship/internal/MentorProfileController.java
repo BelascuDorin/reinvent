@@ -1,6 +1,8 @@
 package com.reinvent.mentorship.internal;
 
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -28,5 +30,11 @@ class MentorProfileController {
 	MentorProfileView mine() {
 		currentUser.requireRole(Role.MENTOR);
 		return mentorProfiles.myProfile(currentUser.requireUserId());
+	}
+
+	@PutMapping("/me")
+	MentorProfileView update(@RequestBody UpdateMentorProfileRequest edit) {
+		currentUser.requireRole(Role.MENTOR);
+		return mentorProfiles.updateMyProfile(currentUser.requireUserId(), edit);
 	}
 }

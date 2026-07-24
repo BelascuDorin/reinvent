@@ -85,6 +85,31 @@ class MentorProfile {
 		return profile;
 	}
 
+	/**
+	 * Replace the owner-editable presentation with the values from an edit. A full
+	 * replacement (not a patch): the Field and language sets become exactly what was
+	 * sent, so clearing them here is how a Mentor edits themselves back out of
+	 * discovery. {@code employer} is optional — a blank value is normalised to null.
+	 * Field slugs are validated against the curated set by the caller before this runs.
+	 */
+	void update(UpdateMentorProfileRequest edit, Instant now) {
+		this.displayName = blankToNull(edit.displayName());
+		this.roleTitle = blankToNull(edit.roleTitle());
+		this.bio = blankToNull(edit.bio());
+		this.experience = blankToNull(edit.experience());
+		this.employer = blankToNull(edit.employer());
+		this.priceAmount = edit.priceAmount();
+		this.priceCurrency = blankToNull(edit.priceCurrency());
+		this.meetingDurationMinutes = edit.meetingDurationMinutes();
+		this.fieldSlugs = new HashSet<>(edit.fieldSlugs() == null ? Set.of() : edit.fieldSlugs());
+		this.languages = new HashSet<>(edit.languages() == null ? Set.of() : edit.languages());
+		this.updatedAt = now;
+	}
+
+	private static String blankToNull(String value) {
+		return value == null || value.isBlank() ? null : value.strip();
+	}
+
 	/** The profile-local half of discoverability: enough filled in to be worth showing. */
 	boolean isComplete() {
 		return !fieldSlugs.isEmpty() && hasPrice() && meetingDurationMinutes != null;
