@@ -35,13 +35,15 @@ class MentorshipService implements MentorBookability {
 			ApplicationStatus.APPLIED, ApplicationStatus.UNDER_REVIEW);
 
 	private final MentorApplicationRepository applications;
+	private final MentorProfileService mentorProfiles;
 	private final PaymentGateway paymentGateway;
 	private final Clock clock;
 	private final ApplicationEventPublisher events;
 
-	MentorshipService(MentorApplicationRepository applications, PaymentGateway paymentGateway, Clock clock,
-			ApplicationEventPublisher events) {
+	MentorshipService(MentorApplicationRepository applications, MentorProfileService mentorProfiles,
+			PaymentGateway paymentGateway, Clock clock, ApplicationEventPublisher events) {
 		this.applications = applications;
+		this.mentorProfiles = mentorProfiles;
 		this.paymentGateway = paymentGateway;
 		this.clock = clock;
 		this.events = events;
@@ -85,6 +87,10 @@ class MentorshipService implements MentorBookability {
 	MentorApplicationView approve(UUID applicationId) {
 		MentorApplication application = require(applicationId);
 		application.approve(clock.now());
+		// Give the new Mentor something to start from: a draft profile, provisioned
+		// intra-module (no new platform event). The MentorApproved event below still
+		// tells identity to grant the MENTOR role.
+		mentorProfiles.provisionDraft(application.applicantUserId(), clock.now());
 		events.publishEvent(new MentorApproved(application.applicantUserId()));
 		return view(application);
 	}
@@ -118,8 +124,7 @@ class MentorshipService implements MentorBookability {
 	}
 
 	private boolean isBookable(MentorApplication application) {
-		return application.status() == ApplicationStatus.APPROVED
-				&& !application.isSuspended()
+		return application.isActiveMentor()
 				&& paymentGateway.isPayoutOnboardingComplete(application.applicantUserId());
 	}
 }

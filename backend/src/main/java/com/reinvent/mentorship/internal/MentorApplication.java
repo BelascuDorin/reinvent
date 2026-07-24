@@ -75,6 +75,15 @@ class MentorApplication {
 		return suspended;
 	}
 
+	/**
+	 * An approved Mentor still in circulation — the shared half of both bookability
+	 * (ADR-0003) and discovery visibility (spec 0002). Owned here so the rule lives on
+	 * the aggregate, not re-derived by each service that needs it.
+	 */
+	boolean isActiveMentor() {
+		return status == ApplicationStatus.APPROVED && !suspended;
+	}
+
 	/** A Reviewer picks the application up for vetting. */
 	void startReview(Instant now) {
 		requireStatus(ApplicationStatus.APPLIED, "start review of");

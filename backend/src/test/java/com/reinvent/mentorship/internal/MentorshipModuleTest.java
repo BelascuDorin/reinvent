@@ -74,6 +74,39 @@ class MentorshipModuleTest {
 	@Autowired
 	FieldCatalog fields;
 
+	@Autowired
+	MentorProfileService mentorProfiles;
+
+	@Test
+	void approvingProvisionsADraftProfileThatIsNotYetComplete() {
+		UUID applicant = UUID.randomUUID();
+		UUID applicationId = mentorship.apply(applicant).id();
+		mentorship.startReview(applicationId);
+		mentorship.approve(applicationId);
+
+		MentorProfileView profile = mentorProfiles.myProfile(applicant);
+
+		// A draft exists to start from, keyed by the Mentor's User id, but it is empty
+		// (nothing seeded from the application) and therefore not yet discoverable.
+		assertThat(profile.mentorUserId()).isEqualTo(applicant);
+		assertThat(profile.fieldSlugs()).isEmpty();
+		assertThat(profile.priceAmount()).isNull();
+		assertThat(profile.meetingDurationMinutes()).isNull();
+		assertThat(profile.complete()).isFalse();
+		assertThat(profile.discoverable()).isFalse();
+	}
+
+	@Test
+	void aUserWhoWasNeverApprovedHasNoProfile() {
+		UUID applicant = UUID.randomUUID();
+		mentorship.apply(applicant); // applied, but not approved
+
+		assertThatExceptionOfType(MentorProfileNotFoundException.class)
+				.isThrownBy(() -> mentorProfiles.myProfile(applicant));
+		assertThatExceptionOfType(MentorProfileNotFoundException.class)
+				.isThrownBy(() -> mentorProfiles.myProfile(UUID.randomUUID()));
+	}
+
 	@Test
 	void theCuratedFieldsAreSeededAndListedInBrowseOrder() {
 		var listed = fields.list();
