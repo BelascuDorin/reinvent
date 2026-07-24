@@ -17,5 +17,8 @@ const { data: status } = await useFetch<Status>('/api/status')
     <p v-if="status">
       Backend {{ status.service }} — {{ status.status }} @ {{ status.time }}
     </p>
+    <p>
+      <NuxtLink to="/fields">Explore career Fields</NuxtLink>
+    </p>
   </main>
 </template>

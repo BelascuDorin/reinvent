@@ -71,6 +71,24 @@ class MentorshipModuleTest {
 	@Autowired
 	InMemoryPaymentGateway payments;
 
+	@Autowired
+	FieldCatalog fields;
+
+	@Test
+	void theCuratedFieldsAreSeededAndListedInBrowseOrder() {
+		var listed = fields.list();
+
+		// The Flyway V8 seed populates the curated vocabulary; nothing writes it at runtime.
+		assertThat(listed).extracting(FieldView::slug)
+				.contains("software-engineering", "medicine", "law", "finance", "design");
+
+		// Ordering is stable: the list follows the seeded sort order (Software
+		// Engineering first, Education last), not insertion or slug order.
+		assertThat(listed.get(0).slug()).isEqualTo("software-engineering");
+		assertThat(listed.get(listed.size() - 1).slug()).isEqualTo("education");
+		assertThat(listed).extracting(FieldView::displayName).contains("Software Engineering");
+	}
+
 	@Test
 	void applyingStartsInApplied() {
 		UUID applicant = UUID.randomUUID();
