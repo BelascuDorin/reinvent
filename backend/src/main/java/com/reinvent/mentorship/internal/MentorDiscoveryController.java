@@ -1,8 +1,10 @@
 package com.reinvent.mentorship.internal;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -27,5 +29,14 @@ class MentorDiscoveryController {
 	List<MentorSummaryView> search(@RequestParam(required = false) String field,
 			@RequestParam(required = false) String language) {
 		return directory.search(field, language);
+	}
+
+	/**
+	 * One Mentor's whole public presentation, at a stable shareable URL. Not found unless
+	 * that Mentor is discoverable, so an unfinished or suspended profile is never public.
+	 */
+	@GetMapping("/{mentorUserId}")
+	MentorPublicProfileView profile(@PathVariable UUID mentorUserId) {
+		return directory.publicProfile(mentorUserId);
 	}
 }

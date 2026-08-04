@@ -1,5 +1,10 @@
 <script setup lang="ts">
-import type { Field, MentorApplication, MentorProfile } from '~/types/mentorship'
+import type {
+  Field,
+  MentorApplication,
+  MentorProfile,
+  PublicMentorProfile,
+} from '~/types/mentorship'
 
 interface ProfileForm {
   displayName: string
@@ -29,6 +34,14 @@ const { data: profile, refresh: refreshProfile } = await useAsyncData<MentorProf
 
 const { data: fields } = await useAsyncData<Field[]>('fields', () =>
   request('/api/fields').catch(() => []) as Promise<Field[]>,
+)
+
+// The Mentor's own preview of their public presentation. Available while the profile is
+// still incomplete — seeing it is part of finishing it — and rendered by the very same
+// component the public page uses, so it can't drift from what Mentees actually get.
+const { data: preview, refresh: refreshPreview } = await useAsyncData<PublicMentorProfile | null>(
+  'my-preview',
+  () => request('/api/mentor-profiles/me/preview').catch(() => null) as Promise<PublicMentorProfile | null>,
 )
 
 const error = ref<string | null>(null)
@@ -96,7 +109,7 @@ async function save() {
   }
   try {
     await $fetch('/api/mentor-profiles/me', { method: 'PUT', body })
-    await refreshProfile()
+    await Promise.all([refreshProfile(), refreshPreview()])
     form.value = toForm(profile.value ?? null)
     saved.value = true
   } catch {
@@ -180,6 +193,11 @@ async function save() {
       </form>
 
       <p v-if="saved">Profile saved.</p>
+    </section>
+
+    <section v-if="preview">
+      <h2>What Mentees will see</h2>
+      <MentorPublicProfile :profile="preview" :fields="fields" />
     </section>
 
     <p v-if="error">{{ error }}</p>

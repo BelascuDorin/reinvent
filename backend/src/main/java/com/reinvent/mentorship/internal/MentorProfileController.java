@@ -39,4 +39,11 @@ class MentorProfileController {
 		currentUser.requireRole(Role.MENTOR);
 		return mentorProfiles.updateMyProfile(currentUser.requireUserId(), edit);
 	}
+
+	/** What Mentees will see — the public presentation, previewed by its owner. */
+	@GetMapping("/me/preview")
+	MentorPublicProfileView preview() {
+		currentUser.requireRole(Role.MENTOR);
+		return mentorProfiles.previewMyProfile(currentUser.requireUserId());
+	}
 }

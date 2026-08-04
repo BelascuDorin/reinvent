@@ -1,13 +1,9 @@
 package com.reinvent.mentorship.internal;
 
-import java.util.Collection;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,11 +34,11 @@ class MentorDiscovery {
 			.thenComparing(MentorProfile::mentorUserId);
 
 	private final MentorProfileRepository profiles;
-	private final MentorApplicationRepository applications;
+	private final MentorDiscoverability discoverability;
 
-	MentorDiscovery(MentorProfileRepository profiles, MentorApplicationRepository applications) {
+	MentorDiscovery(MentorProfileRepository profiles, MentorDiscoverability discoverability) {
 		this.profiles = profiles;
-		this.applications = applications;
+		this.discoverability = discoverability;
 	}
 
 	/**
@@ -52,7 +48,8 @@ class MentorDiscovery {
 	 */
 	List<MentorSummaryView> search(String fieldSlug, String language) {
 		List<MentorProfile> matching = profiles.findMatching(omittedIfBlank(fieldSlug), omittedIfBlank(language));
-		Set<UUID> activeMentors = activeMentorsAmong(matching.stream().map(MentorProfile::mentorUserId).toList());
+		Set<UUID> activeMentors = discoverability
+				.activeMentorsAmong(matching.stream().map(MentorProfile::mentorUserId).toList());
 
 		return matching.stream()
 				.filter(profile -> activeMentors.contains(profile.mentorUserId()))
@@ -63,21 +60,16 @@ class MentorDiscovery {
 	}
 
 	/**
-	 * Which of these Users are currently active Mentors, read from each one's latest
-	 * application (a rejected User may have reapplied, so older rows are history).
+	 * One Mentor's whole public presentation, by the stable identifier a summary carries.
+	 * Only a discoverable Mentor has one: an incomplete or suspended Mentor is not found
+	 * at all rather than shown half-finished, which is the same rule the browse list
+	 * applies — completeness gates visibility, and it gates it everywhere.
 	 */
-	private Set<UUID> activeMentorsAmong(Collection<UUID> userIds) {
-		if (userIds.isEmpty()) {
-			return Set.of();
-		}
-		Map<UUID, MentorApplication> latest = new HashMap<>();
-		for (MentorApplication application : applications.findByApplicantUserIdInOrderByCreatedAtDesc(userIds)) {
-			latest.putIfAbsent(application.applicantUserId(), application);
-		}
-		return latest.values().stream()
-				.filter(MentorApplication::isActiveMentor)
-				.map(MentorApplication::applicantUserId)
-				.collect(Collectors.toSet());
+	MentorPublicProfileView publicProfile(UUID mentorUserId) {
+		return profiles.findById(mentorUserId)
+				.filter(discoverability::isDiscoverable)
+				.map(MentorPublicProfileView::of)
+				.orElseThrow(MentorProfileNotFoundException::notPubliclyAvailable);
 	}
 
 	/** An empty search box narrows nothing, so blank reads the same as absent. */

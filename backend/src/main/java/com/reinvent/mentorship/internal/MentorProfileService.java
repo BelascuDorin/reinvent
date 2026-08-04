@@ -9,28 +9,26 @@ import org.springframework.transaction.annotation.Transactional;
 import com.reinvent.platform.Clock;
 
 /**
- * The Mentor profile: its provisioning, the owner's edits, and the owner's read
- * (spec 0002). Profiles are created
- * as a draft when the Reviewer approves a Mentor — an intra-module reaction driven by
- * {@link MentorshipService#approve}, with no new cross-module event. Discoverability
- * composes the profile-local completeness rule with the application's approved-and-
- * not-suspended state; both live in this module, so this service reads the application
- * repository directly rather than depending on {@link MentorshipService} (which would
- * form a cycle, since approval calls back here to provision).
+ * The Mentor profile as its owner deals with it (spec 0002): provisioning, their edits,
+ * their own read, and the preview of how the public sees them. Profiles are created as a
+ * draft when the Reviewer approves a Mentor — an intra-module reaction driven by
+ * {@link MentorshipService#approve}, with no new cross-module event. Whether the Mentor
+ * is discoverable is not decided here: {@link MentorDiscoverability} owns that rule, so
+ * the owner's indicator and the public listings can never disagree.
  */
 @Service
 @Transactional
 class MentorProfileService {
 
 	private final MentorProfileRepository profiles;
-	private final MentorApplicationRepository applications;
+	private final MentorDiscoverability discoverability;
 	private final FieldCatalog fieldCatalog;
 	private final Clock clock;
 
-	MentorProfileService(MentorProfileRepository profiles, MentorApplicationRepository applications,
+	MentorProfileService(MentorProfileRepository profiles, MentorDiscoverability discoverability,
 			FieldCatalog fieldCatalog, Clock clock) {
 		this.profiles = profiles;
-		this.applications = applications;
+		this.discoverability = discoverability;
 		this.fieldCatalog = fieldCatalog;
 		this.clock = clock;
 	}
@@ -69,20 +67,19 @@ class MentorProfileService {
 	}
 
 	/**
-	 * Assemble the owner's view, composing the profile-local completeness rule with the
-	 * Mentor's active state. Discovery visibility is complete AND still an active Mentor
-	 * — deliberately weaker than MentorBookability, which additionally gates on payment
-	 * onboarding (a booking-time concern, not a discovery one).
+	 * The caller's own profile as a Mentee would see it — the preview that answers "what
+	 * will they actually read?". Deliberately the same view the public endpoint returns,
+	 * so the two can't drift, and deliberately available while the profile is still
+	 * incomplete: checking the presentation is part of finishing it.
 	 */
-	private MentorProfileView view(MentorProfile profile) {
-		boolean complete = profile.isComplete();
-		boolean discoverable = complete && isActiveMentor(profile.mentorUserId());
-		return MentorProfileView.of(profile, complete, discoverable);
+	@Transactional(readOnly = true)
+	MentorPublicProfileView previewMyProfile(UUID userId) {
+		MentorProfile profile = profiles.findById(userId).orElseThrow(MentorProfileNotFoundException::new);
+		return MentorPublicProfileView.of(profile);
 	}
 
-	private boolean isActiveMentor(UUID userId) {
-		return applications.findFirstByApplicantUserIdOrderByCreatedAtDesc(userId)
-				.map(MentorApplication::isActiveMentor)
-				.orElse(false);
+	/** Assemble the owner's view, telling them where they stand. */
+	private MentorProfileView view(MentorProfile profile) {
+		return MentorProfileView.of(profile, profile.isComplete(), discoverability.isDiscoverable(profile));
 	}
 }

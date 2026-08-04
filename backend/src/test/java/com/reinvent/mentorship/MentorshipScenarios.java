@@ -68,6 +68,17 @@ class MentorshipScenarios {
 				.andExpect(status().isOk());
 	}
 
+	/**
+	 * The Mentor's own User id — the stable identifier their public profile lives under.
+	 * Read from their own profile, which is the only place a Mentor learns it.
+	 */
+	String mentorUserId(MockHttpSession mentor) throws Exception {
+		MvcResult result = mvc.perform(get("/api/mentor-profiles/me").session(mentor))
+				.andExpect(status().isOk())
+				.andReturn();
+		return JsonPath.read(result.getResponse().getContentAsString(), "$.mentorUserId");
+	}
+
 	/** The Reviewer takes an approved Mentor out of circulation. */
 	void suspend(String applicationId) throws Exception {
 		mvc.perform(post("/api/reviewer/applications/{id}/suspend", applicationId).session(reviewer()))

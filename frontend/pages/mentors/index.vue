@@ -68,7 +68,11 @@ const price = (mentor: MentorSummary) => `${mentor.priceAmount} ${mentor.priceCu
     </p>
     <ul v-else>
       <li v-for="mentor in mentors" :key="mentor.mentorUserId">
-        <h2>{{ mentor.displayName ?? 'A Mentor' }}</h2>
+        <h2>
+          <NuxtLink :to="`/mentors/${mentor.mentorUserId}`">
+            {{ mentor.displayName ?? 'A Mentor' }}
+          </NuxtLink>
+        </h2>
         <p v-if="mentor.roleTitle">{{ mentor.roleTitle }}</p>
         <p>{{ price(mentor) }} · {{ mentor.meetingDurationMinutes }} minute Meeting</p>
         <p>Fields: {{ mentor.fieldSlugs.map(fieldName).join(', ') }}</p>
