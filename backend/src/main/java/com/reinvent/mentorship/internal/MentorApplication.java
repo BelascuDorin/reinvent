@@ -33,6 +33,11 @@ class MentorApplication {
 	@Enumerated(EnumType.STRING)
 	private ApplicationStatus status;
 
+	/** What the applicant wrote about themselves; seeds their draft profile on approval. */
+	private String headline;
+
+	private String bio;
+
 	@Column(name = "rejection_reason")
 	private String rejectionReason;
 
@@ -53,10 +58,12 @@ class MentorApplication {
 		// for JPA
 	}
 
-	MentorApplication(UUID id, UUID applicantUserId, int attempt, Instant now) {
+	MentorApplication(UUID id, UUID applicantUserId, int attempt, String headline, String bio, Instant now) {
 		this.id = id;
 		this.applicantUserId = applicantUserId;
 		this.attempt = attempt;
+		this.headline = headline;
+		this.bio = bio;
 		this.status = ApplicationStatus.APPLIED;
 		this.suspended = false;
 		this.createdAt = now;
@@ -82,6 +89,14 @@ class MentorApplication {
 
 	int attempt() {
 		return attempt;
+	}
+
+	String headline() {
+		return headline;
+	}
+
+	String bio() {
+		return bio;
 	}
 
 	UUID id() {

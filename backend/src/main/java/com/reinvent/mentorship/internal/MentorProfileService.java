@@ -34,12 +34,14 @@ class MentorProfileService {
 	}
 
 	/**
-	 * Provision a draft profile for a newly approved Mentor. Idempotent: a User keeps
-	 * their existing profile (and its filled-in data) rather than having it reset.
+	 * Provision a draft profile for a newly approved Mentor, seeded from what they wrote
+	 * when applying. Idempotent: a User keeps their existing profile rather than having it
+	 * reset, so a Mentor who has since edited their own words never loses them to a later
+	 * approval.
 	 */
-	void provisionDraft(UUID mentorUserId, Instant now) {
+	void provisionDraft(UUID mentorUserId, String headline, String bio, Instant now) {
 		if (!profiles.existsById(mentorUserId)) {
-			profiles.save(MentorProfile.draft(mentorUserId, now));
+			profiles.save(MentorProfile.draft(mentorUserId, headline, bio, now));
 		}
 	}
 

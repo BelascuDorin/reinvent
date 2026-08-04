@@ -12,12 +12,15 @@ record MentorApplicationView(
 		UUID id,
 		UUID applicantUserId,
 		ApplicationStatus status,
+		String headline,
+		String bio,
 		String rejectionReason,
 		boolean suspended,
 		boolean bookable) {
 
 	static MentorApplicationView of(MentorApplication application, boolean bookable) {
 		return new MentorApplicationView(application.id(), application.applicantUserId(), application.status(),
-				application.rejectionReason(), application.isSuspended(), bookable);
+				application.headline(), application.bio(), application.rejectionReason(),
+				application.isSuspended(), bookable);
 	}
 }

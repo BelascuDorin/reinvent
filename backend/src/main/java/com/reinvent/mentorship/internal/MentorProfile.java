@@ -74,13 +74,17 @@ class MentorProfile {
 	}
 
 	/**
-	 * A blank draft for a freshly approved Mentor. Per the discovery slice's decision,
-	 * nothing is seeded from the application (it carries no presentation fields), so the
-	 * Mentor starts from an empty — and therefore not-yet-complete — profile.
+	 * A draft for a freshly approved Mentor, seeded with what they wrote when they applied
+	 * so they don't face a blank page. Only the two things the application collects are
+	 * carried over: the headline becomes the role/title, and the bio the bio. A seeded
+	 * draft is still not complete — no Field, price or Meeting duration — so seeding never
+	 * makes anyone discoverable by itself.
 	 */
-	static MentorProfile draft(UUID mentorUserId, Instant now) {
+	static MentorProfile draft(UUID mentorUserId, String roleTitle, String bio, Instant now) {
 		MentorProfile profile = new MentorProfile();
 		profile.mentorUserId = mentorUserId;
+		profile.roleTitle = blankToNull(roleTitle);
+		profile.bio = blankToNull(bio);
 		profile.createdAt = now;
 		profile.updatedAt = now;
 		return profile;

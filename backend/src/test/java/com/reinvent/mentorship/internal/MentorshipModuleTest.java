@@ -80,7 +80,7 @@ class MentorshipModuleTest {
 	@Test
 	void approvingProvisionsADraftProfileThatIsNotYetComplete() {
 		UUID applicant = UUID.randomUUID();
-		UUID applicationId = mentorship.apply(applicant).id();
+		UUID applicationId = apply(applicant).id();
 		mentorship.startReview(applicationId);
 		mentorship.approve(applicationId);
 
@@ -99,7 +99,7 @@ class MentorshipModuleTest {
 	@Test
 	void aUserWhoWasNeverApprovedHasNoProfile() {
 		UUID applicant = UUID.randomUUID();
-		mentorship.apply(applicant); // applied, but not approved
+		apply(applicant); // applied, but not approved
 
 		assertThatExceptionOfType(MentorProfileNotFoundException.class)
 				.isThrownBy(() -> mentorProfiles.myProfile(applicant));
@@ -126,7 +126,7 @@ class MentorshipModuleTest {
 	void applyingStartsInApplied() {
 		UUID applicant = UUID.randomUUID();
 
-		MentorApplicationView view = mentorship.apply(applicant);
+		MentorApplicationView view = apply(applicant);
 
 		assertThat(view.status()).isEqualTo(ApplicationStatus.APPLIED);
 		assertThat(view.bookable()).isFalse();
@@ -136,16 +136,16 @@ class MentorshipModuleTest {
 	@Test
 	void aUserCannotHaveTwoOpenApplications() {
 		UUID applicant = UUID.randomUUID();
-		mentorship.apply(applicant);
+		apply(applicant);
 
 		assertThatExceptionOfType(DuplicateApplicationException.class)
-				.isThrownBy(() -> mentorship.apply(applicant));
+				.isThrownBy(() -> apply(applicant));
 	}
 
 	@Test
 	void approvingAnApplicationAnnouncesItSoTheRoleCanBeGranted(Scenario scenario) {
 		UUID applicant = UUID.randomUUID();
-		UUID applicationId = mentorship.apply(applicant).id();
+		UUID applicationId = apply(applicant).id();
 		mentorship.startReview(applicationId);
 
 		scenario.stimulate(() -> mentorship.approve(applicationId))
@@ -159,7 +159,7 @@ class MentorshipModuleTest {
 	@Test
 	void rejectingRecordsTheReason() {
 		UUID applicant = UUID.randomUUID();
-		UUID applicationId = mentorship.apply(applicant).id();
+		UUID applicationId = apply(applicant).id();
 		mentorship.startReview(applicationId);
 
 		MentorApplicationView rejected = mentorship.reject(applicationId, "Insufficient experience.");
@@ -171,7 +171,7 @@ class MentorshipModuleTest {
 	@Test
 	void onlyLegalTransitionsArePermitted() {
 		UUID applicant = UUID.randomUUID();
-		UUID applicationId = mentorship.apply(applicant).id();
+		UUID applicationId = apply(applicant).id();
 
 		// Cannot approve or reject an application that is still merely APPLIED.
 		assertThatExceptionOfType(IllegalApplicationTransitionException.class)
@@ -190,11 +190,11 @@ class MentorshipModuleTest {
 	@Test
 	void aRejectedApplicantMayApplyAgain() {
 		UUID applicant = UUID.randomUUID();
-		UUID first = mentorship.apply(applicant).id();
+		UUID first = apply(applicant).id();
 		mentorship.startReview(first);
 		mentorship.reject(first, "Try later.");
 
-		MentorApplicationView second = mentorship.apply(applicant);
+		MentorApplicationView second = apply(applicant);
 
 		assertThat(second.status()).isEqualTo(ApplicationStatus.APPLIED);
 		assertThat(second.id()).isNotEqualTo(first);
@@ -203,7 +203,7 @@ class MentorshipModuleTest {
 	@Test
 	void onlyAnApprovedMentorCanBeSuspended() {
 		UUID applicant = UUID.randomUUID();
-		UUID applicationId = mentorship.apply(applicant).id();
+		UUID applicationId = apply(applicant).id();
 
 		assertThatExceptionOfType(IllegalApplicationTransitionException.class)
 				.isThrownBy(() -> mentorship.suspend(applicationId));
@@ -221,7 +221,7 @@ class MentorshipModuleTest {
 	@Test
 	void bookableOnlyWhenApprovedNotSuspendedAndOnboarded() {
 		UUID applicant = UUID.randomUUID();
-		UUID applicationId = mentorship.apply(applicant).id();
+		UUID applicationId = apply(applicant).id();
 		mentorship.startReview(applicationId);
 		mentorship.approve(applicationId);
 
@@ -235,4 +235,14 @@ class MentorshipModuleTest {
 		mentorship.suspend(applicationId);
 		assertThat(mentorship.isBookable(applicant)).isFalse();
 	}
+
+	/**
+	 * Applies with unremarkable content. Applying now carries a headline and a bio (they
+	 * seed the Mentor's draft profile), which these lifecycle tests don't vary.
+	 */
+	private MentorApplicationView apply(UUID applicantUserId) {
+		return mentorship.apply(applicantUserId,
+				new MentorApplicationRequest("A Mentor worth meeting", "Happy to talk about the work."));
+	}
+
 }

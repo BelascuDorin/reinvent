@@ -47,6 +47,10 @@ const { data: preview, refresh: refreshPreview } = await useAsyncData<PublicMent
 const error = ref<string | null>(null)
 const saved = ref(false)
 
+// Applying carries what the Mentor wants to say about themselves: the Reviewer vets it,
+// and on approval it seeds their draft profile so they don't start from a blank page.
+const applicationForm = ref({ headline: '', bio: '' })
+
 function toForm(p: MentorProfile | null): ProfileForm {
   return {
     displayName: p?.displayName ?? '',
@@ -80,10 +84,10 @@ const missing = computed(() => {
 async function apply() {
   error.value = null
   try {
-    await $fetch('/api/mentor-applications', { method: 'POST' })
+    await $fetch('/api/mentor-applications', { method: 'POST', body: applicationForm.value })
     await refresh()
   } catch {
-    error.value = 'Could not submit your application.'
+    error.value = 'Could not submit your application. A headline and a bio are both required.'
   }
 }
 
@@ -131,12 +135,42 @@ async function save() {
       <p v-else-if="application.status === 'APPROVED' && !application.bookable">
         You're approved — but you can't be booked yet until you complete payment onboarding.
       </p>
-      <button v-if="application.status === 'REJECTED'" @click="apply">Apply again</button>
+      <form v-if="application.status === 'REJECTED'" @submit.prevent="apply">
+        <p>
+          <label>
+            Headline
+            <input v-model="applicationForm.headline" type="text" maxlength="200" required />
+          </label>
+        </p>
+        <p>
+          <label>
+            About you
+            <textarea v-model="applicationForm.bio" maxlength="5000" required />
+          </label>
+        </p>
+        <button type="submit">Apply again</button>
+      </form>
     </template>
 
     <template v-else>
       <p>You haven't applied to be a Mentor yet.</p>
-      <button @click="apply">Apply to be a Mentor</button>
+      <form @submit.prevent="apply">
+        <p>
+          <label>
+            Headline
+            <input v-model="applicationForm.headline" type="text" maxlength="200" required
+              placeholder="e.g. Staff Engineer at a hospital" />
+          </label>
+        </p>
+        <p>
+          <label>
+            About you
+            <textarea v-model="applicationForm.bio" maxlength="5000" required
+              placeholder="What you do, and what you could help a Mentee with." />
+          </label>
+        </p>
+        <button type="submit">Apply to be a Mentor</button>
+      </form>
     </template>
 
     <section v-if="profile">

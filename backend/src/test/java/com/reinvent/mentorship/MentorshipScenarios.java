@@ -47,7 +47,12 @@ class MentorshipScenarios {
 	ApprovedMentor approvedMentor(String email) throws Exception {
 		MockHttpSession applicant = signUpAndLogIn(email);
 		String applicationId = applyAndReturnId(applicant);
+		approveApplication(applicant, applicationId);
+		return new ApprovedMentor(applicant, applicationId);
+	}
 
+	/** The seeded Reviewer picks the application up and approves it. */
+	void approveApplication(MockHttpSession applicant, String applicationId) throws Exception {
 		MockHttpSession reviewer = reviewer();
 		mvc.perform(post("/api/reviewer/applications/{id}/start-review", applicationId).session(reviewer))
 				.andExpect(status().isOk());
@@ -58,7 +63,6 @@ class MentorshipScenarios {
 		// which makes it the honest signal that approval has fully landed.
 		await().atMost(TIMEOUT).untilAsserted(() -> mvc.perform(get("/api/mentor-profiles/me").session(applicant))
 				.andExpect(status().isOk()));
-		return new ApprovedMentor(applicant, applicationId);
 	}
 
 	/** The Mentor saves their profile, exactly as the editor does. */
@@ -91,8 +95,16 @@ class MentorshipScenarios {
 				.andExpect(status().isOk());
 	}
 
+	/** Applies with unremarkable content, for the tests that don't care what it says. */
 	String applyAndReturnId(MockHttpSession session) throws Exception {
-		MvcResult result = mvc.perform(post("/api/mentor-applications").session(session))
+		return applyAndReturnId(session, "A Mentor worth meeting", "Happy to talk about the work.");
+	}
+
+	String applyAndReturnId(MockHttpSession session, String headline, String bio) throws Exception {
+		MvcResult result = mvc.perform(post("/api/mentor-applications").session(session)
+				.contentType(MediaType.APPLICATION_JSON).content("""
+						{"headline":"%s","bio":"%s"}
+						""".formatted(headline, bio)))
 				.andExpect(status().isCreated())
 				.andReturn();
 		return JsonPath.read(result.getResponse().getContentAsString(), "$.id");

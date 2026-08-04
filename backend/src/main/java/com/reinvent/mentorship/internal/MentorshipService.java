@@ -50,13 +50,13 @@ class MentorshipService implements MentorBookability {
 	}
 
 	/** A User applies for the Mentor role; at most one open or approved application. */
-	MentorApplicationView apply(UUID applicantUserId) {
+	MentorApplicationView apply(UUID applicantUserId, MentorApplicationRequest request) {
 		if (applications.existsByApplicantUserIdAndStatusIn(applicantUserId, BLOCKING)) {
 			throw new DuplicateApplicationException();
 		}
 		int attempt = applications.countByApplicantUserId(applicantUserId) + 1;
 		MentorApplication application = new MentorApplication(UUID.randomUUID(), applicantUserId, attempt,
-				clock.now());
+				request.headline().strip(), request.bio().strip(), clock.now());
 		return view(applications.save(application));
 	}
 
@@ -89,10 +89,11 @@ class MentorshipService implements MentorBookability {
 	MentorApplicationView approve(UUID applicationId) {
 		MentorApplication application = require(applicationId);
 		application.approve(clock.now());
-		// Give the new Mentor something to start from: a draft profile, provisioned
-		// intra-module (no new platform event). The MentorApproved event below still
-		// tells identity to grant the MENTOR role.
-		mentorProfiles.provisionDraft(application.applicantUserId(), clock.now());
+		// Give the new Mentor something to start from: a draft profile seeded with what
+		// they wrote when applying, provisioned intra-module (no new platform event). The
+		// MentorApproved event below still tells identity to grant the MENTOR role.
+		mentorProfiles.provisionDraft(application.applicantUserId(), application.headline(), application.bio(),
+				clock.now());
 		events.publishEvent(new MentorApproved(application.applicantUserId()));
 		return view(application);
 	}

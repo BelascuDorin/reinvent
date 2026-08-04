@@ -59,6 +59,9 @@ export interface MentorApplication {
   id: string
   applicantUserId: string
   status: 'APPLIED' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED'
+  /** What the applicant wrote; seeds their draft Mentor profile on approval. */
+  headline: string | null
+  bio: string | null
   rejectionReason: string | null
   suspended: boolean
   bookable: boolean

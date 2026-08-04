@@ -51,6 +51,11 @@ class MentorApplicationFlowTests {
 
 	private static final Duration TIMEOUT = Duration.ofSeconds(10);
 
+	/** An application whose content is beside the point — see MentorApplicationContentFlowTests. */
+	private static final String APPLICATION = """
+			{"headline":"A Mentor worth meeting","bio":"Happy to talk about the work."}
+			""";
+
 	@Autowired
 	MockMvc mvc;
 
@@ -65,7 +70,8 @@ class MentorApplicationFlowTests {
 	void anApplicantAppliesAndSeesTheirStatus() throws Exception {
 		MockHttpSession session = scenarios.signUpAndLogIn("applicant-status@example.com");
 
-		mvc.perform(post("/api/mentor-applications").session(session))
+		mvc.perform(post("/api/mentor-applications").session(session)
+				.contentType(MediaType.APPLICATION_JSON).content(APPLICATION))
 				.andExpect(status().isCreated())
 				.andExpect(jsonPath("$.status").value("APPLIED"))
 				.andExpect(jsonPath("$.bookable").value(false));
@@ -77,15 +83,29 @@ class MentorApplicationFlowTests {
 
 	@Test
 	void applyingRequiresBeingSignedIn() throws Exception {
-		mvc.perform(post("/api/mentor-applications")).andExpect(status().isUnauthorized());
+		// A well-formed application from nobody is an authorization failure, which is the
+		// interesting case: the body is fine, the caller is not signed in.
+		mvc.perform(post("/api/mentor-applications")
+				.contentType(MediaType.APPLICATION_JSON).content(APPLICATION))
+				.andExpect(status().isUnauthorized());
+
+		// A malformed one is refused too, just earlier — the request never reaches the
+		// session guard, so it fails validation rather than authorization.
+		mvc.perform(post("/api/mentor-applications")
+				.contentType(MediaType.APPLICATION_JSON).content("{}"))
+				.andExpect(status().isBadRequest());
 	}
 
 	@Test
 	void aUserCannotApplyTwiceWhileOpen() throws Exception {
 		MockHttpSession session = scenarios.signUpAndLogIn("applicant-dup@example.com");
-		mvc.perform(post("/api/mentor-applications").session(session)).andExpect(status().isCreated());
+		mvc.perform(post("/api/mentor-applications").session(session)
+				.contentType(MediaType.APPLICATION_JSON).content(APPLICATION))
+				.andExpect(status().isCreated());
 
-		mvc.perform(post("/api/mentor-applications").session(session)).andExpect(status().isConflict());
+		mvc.perform(post("/api/mentor-applications").session(session)
+				.contentType(MediaType.APPLICATION_JSON).content(APPLICATION))
+				.andExpect(status().isConflict());
 	}
 
 	@Test

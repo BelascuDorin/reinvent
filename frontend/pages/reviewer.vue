@@ -48,6 +48,10 @@ async function reject(id: string) {
         <ul v-else>
           <li v-for="app in queue" :key="app.id">
             <span>{{ app.applicantUserId }} — {{ app.status }}</span>
+            <!-- What the applicant wrote: approval is a human decision (ADR-0001), so
+                 the Reviewer needs something to actually read. -->
+            <p v-if="app.headline"><strong>{{ app.headline }}</strong></p>
+            <p v-if="app.bio">{{ app.bio }}</p>
             <button v-if="app.status === 'APPLIED'" @click="act(app.id, 'start-review')">Start review</button>
             <template v-if="app.status === 'UNDER_REVIEW'">
               <button @click="act(app.id, 'approve')">Approve</button>
