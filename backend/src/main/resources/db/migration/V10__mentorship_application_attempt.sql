@@ -23,6 +23,6 @@ ALTER TABLE mentor_application
   ALTER COLUMN attempt SET NOT NULL;
 
 -- Two applications by one User can never be the same attempt. A database backstop to
--- the service's count, in the same spirit as the one-open-application index above it.
+-- the service's count, in the same spirit as V6's one-open-application index.
 CREATE UNIQUE INDEX uq_mentor_application_attempt_per_user
   ON mentor_application (applicant_user_id, attempt);

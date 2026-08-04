@@ -16,8 +16,8 @@ import jakarta.persistence.Table;
 
 /**
  * A Mentor's public presentation (spec 0002), one per Mentor, keyed by their User id.
- * Provisioned as an empty draft when the Reviewer approves the Mentor, then filled in
- * by the owner. The aggregate owns its own completeness rule: a profile is
+ * Provisioned when the Reviewer approves the Mentor, seeded with the headline and bio
+ * from their application, and filled in from there by the owner. The aggregate owns its own completeness rule: a profile is
  * <em>complete</em> — the profile-local half of discoverability — once it has at
  * least one Field, a price, and a Meeting duration. Whether the Mentor is actually
  * discoverable additionally depends on the application being approved and not

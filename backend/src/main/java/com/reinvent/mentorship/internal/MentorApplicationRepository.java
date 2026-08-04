@@ -2,6 +2,7 @@ package com.reinvent.mentorship.internal;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -9,9 +10,15 @@ import org.springframework.data.jpa.repository.JpaRepository;
 interface MentorApplicationRepository extends JpaRepository<MentorApplication, UUID> {
 
 	/**
-	 * A User's whole application history. Callers pick the one that counts with
-	 * {@link MentorApplication#current(Collection)} rather than ordering it themselves.
+	 * The one application that says where a User stands, or empty if they never applied.
+	 * The rule for picking it lives on {@link MentorApplication#current(Collection)}; this
+	 * pairs it with the query so no caller has to remember to do both.
 	 */
+	default Optional<MentorApplication> findCurrentByApplicantUserId(UUID applicantUserId) {
+		return MentorApplication.current(findByApplicantUserId(applicantUserId));
+	}
+
+	/** A User's whole application history, rejections included. */
 	List<MentorApplication> findByApplicantUserId(UUID applicantUserId);
 
 	/** How many times this User has applied — the next application is the one after. */
@@ -19,7 +26,7 @@ interface MentorApplicationRepository extends JpaRepository<MentorApplication, U
 
 	boolean existsByApplicantUserIdAndStatusIn(UUID applicantUserId, Collection<ApplicationStatus> statuses);
 
-	List<MentorApplication> findByStatusInOrderByCreatedAtAsc(Collection<ApplicationStatus> statuses);
+	List<MentorApplication> findByStatusInOrderByCreatedAtAscIdAsc(Collection<ApplicationStatus> statuses);
 
 	/**
 	 * The histories of several Users at once, so a caller asking about a batch doesn't

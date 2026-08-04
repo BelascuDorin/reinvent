@@ -87,7 +87,7 @@ async function apply() {
     await $fetch('/api/mentor-applications', { method: 'POST', body: applicationForm.value })
     await refresh()
   } catch {
-    error.value = 'Could not submit your application. A headline and a bio are both required.'
+    error.value = 'Could not submit your application. Check that both fields are filled in.'
   }
 }
 
@@ -136,18 +136,9 @@ async function save() {
         You're approved — but you can't be booked yet until you complete payment onboarding.
       </p>
       <form v-if="application.status === 'REJECTED'" @submit.prevent="apply">
-        <p>
-          <label>
-            Headline
-            <input v-model="applicationForm.headline" type="text" maxlength="200" required />
-          </label>
-        </p>
-        <p>
-          <label>
-            About you
-            <textarea v-model="applicationForm.bio" maxlength="5000" required />
-          </label>
-        </p>
+        <MentorApplicationFields
+          v-model:headline="applicationForm.headline"
+          v-model:bio="applicationForm.bio" />
         <button type="submit">Apply again</button>
       </form>
     </template>
@@ -155,20 +146,9 @@ async function save() {
     <template v-else>
       <p>You haven't applied to be a Mentor yet.</p>
       <form @submit.prevent="apply">
-        <p>
-          <label>
-            Headline
-            <input v-model="applicationForm.headline" type="text" maxlength="200" required
-              placeholder="e.g. Staff Engineer at a hospital" />
-          </label>
-        </p>
-        <p>
-          <label>
-            About you
-            <textarea v-model="applicationForm.bio" maxlength="5000" required
-              placeholder="What you do, and what you could help a Mentee with." />
-          </label>
-        </p>
+        <MentorApplicationFields
+          v-model:headline="applicationForm.headline"
+          v-model:bio="applicationForm.bio" />
         <button type="submit">Apply to be a Mentor</button>
       </form>
     </template>

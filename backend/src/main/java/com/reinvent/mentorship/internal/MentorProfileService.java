@@ -35,9 +35,10 @@ class MentorProfileService {
 
 	/**
 	 * Provision a draft profile for a newly approved Mentor, seeded from what they wrote
-	 * when applying. Idempotent: a User keeps their existing profile rather than having it
-	 * reset, so a Mentor who has since edited their own words never loses them to a later
-	 * approval.
+	 * when applying. Guarded rather than blind: a User who somehow already has a profile
+	 * keeps it, so seeding can never overwrite words a Mentor wrote for themselves. The
+	 * lifecycle should not allow a second approval per User anyway — the guard is there so
+	 * that assumption failing is harmless rather than destructive.
 	 */
 	void provisionDraft(UUID mentorUserId, String headline, String bio, Instant now) {
 		if (!profiles.existsById(mentorUserId)) {

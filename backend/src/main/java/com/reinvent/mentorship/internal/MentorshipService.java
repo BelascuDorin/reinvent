@@ -63,20 +63,20 @@ class MentorshipService implements MentorBookability {
 	/** The applicant's current application, or 404 if they have never applied. */
 	@Transactional(readOnly = true)
 	MentorApplicationView myApplication(UUID applicantUserId) {
-		return MentorApplication.current(applications.findByApplicantUserId(applicantUserId))
+		return applications.findCurrentByApplicantUserId(applicantUserId)
 				.map(this::view)
 				.orElseThrow(ApplicationNotFoundException::new);
 	}
 
 	@Transactional(readOnly = true)
 	List<MentorApplicationView> queue() {
-		return applications.findByStatusInOrderByCreatedAtAsc(PENDING).stream().map(this::view).toList();
+		return applications.findByStatusInOrderByCreatedAtAscIdAsc(PENDING).stream().map(this::view).toList();
 	}
 
 	/** Approved Mentors, so a Reviewer can find one to suspend. */
 	@Transactional(readOnly = true)
 	List<MentorApplicationView> approvedMentors() {
-		return applications.findByStatusInOrderByCreatedAtAsc(List.of(ApplicationStatus.APPROVED))
+		return applications.findByStatusInOrderByCreatedAtAscIdAsc(List.of(ApplicationStatus.APPROVED))
 				.stream().map(this::view).toList();
 	}
 
@@ -119,7 +119,7 @@ class MentorshipService implements MentorBookability {
 	@Override
 	@Transactional(readOnly = true)
 	public boolean isBookable(UUID mentorUserId) {
-		return MentorApplication.current(applications.findByApplicantUserId(mentorUserId))
+		return applications.findCurrentByApplicantUserId(mentorUserId)
 				.map(this::isBookable)
 				.orElse(false);
 	}

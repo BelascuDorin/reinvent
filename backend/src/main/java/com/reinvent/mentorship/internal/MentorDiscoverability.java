@@ -45,7 +45,7 @@ class MentorDiscoverability {
 	 * application (a rejected User may have reapplied, so older rows are history).
 	 */
 	private boolean isActiveMentor(UUID userId) {
-		return MentorApplication.current(applications.findByApplicantUserId(userId))
+		return applications.findCurrentByApplicantUserId(userId)
 				.map(MentorApplication::isActiveMentor)
 				.orElse(false);
 	}

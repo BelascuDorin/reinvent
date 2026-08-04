@@ -122,7 +122,7 @@ class MentorApplicationContentFlowTests {
 	}
 
 	@Test
-	void aSecondApprovalDoesNotOverwriteAProfileTheMentorHasEdited() throws Exception {
+	void theMentorsOwnEditsReplaceTheWordsTheyAppliedWith() throws Exception {
 		MockHttpSession applicant = scenarios.signUpAndLogIn("keeps-own-edits@example.com");
 		scenarios.approveApplication(applicant,
 				scenarios.applyAndReturnId(applicant, "First headline", "First bio"));
@@ -133,8 +133,8 @@ class MentorApplicationContentFlowTests {
 				 "meetingDurationMinutes":30,"fieldSlugs":["software-engineering"],"languages":["en"]}
 				""");
 
-		// Provisioning is idempotent, so a Mentor's own words are never clobbered by
-		// re-running approval's seeding.
+		// The seeded headline and bio were a starting point, not a fixture: editing
+		// replaces them outright, and nothing re-seeds them afterwards.
 		mvc.perform(get("/api/mentor-profiles/me").session(applicant))
 				.andExpect(jsonPath("$.roleTitle").value("Electrical Engineer"))
 				.andExpect(jsonPath("$.bio").value("My own words."));

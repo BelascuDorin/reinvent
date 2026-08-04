@@ -230,10 +230,11 @@ slice, so later specs implement them without re-architecting:
 - **Consent**: resolve a consent link to its context (minor + what is being
   consented to); submit consent (rejects reused or expired links explicitly —
   see the amendment below).
-- **Mentor application**: submit application; get my application status.
+- **Mentor application**: submit application, carrying a headline and bio (see the
+  amendment below); get my application status.
 - **Reviewer**: list application queue; transition an application (pick up →
-  under review, approve, reject-with-reason); suspend a Mentor. Guarded to the
-  REVIEWER role.
+  under review, approve, reject-with-reason); suspend a Mentor and reinstate a
+  suspended one (see the amendment below). Guarded to the REVIEWER role.
 
 All request/response bodies use the CONTEXT.md vocabulary (Mentee, Mentor, Guardian,
 Guardian consent, Mentor application, Reviewer, etc.) — never "account", "member",
