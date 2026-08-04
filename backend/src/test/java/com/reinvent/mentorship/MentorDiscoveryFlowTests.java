@@ -158,6 +158,16 @@ class MentorDiscoveryFlowTests {
 		mvc.perform(get("/api/mentors").param("field", "education"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$[?(@.displayName == 'Maria Montessori')]").doesNotExist());
+
+		// Lifting the suspension puts them back, with the profile they kept throughout —
+		// they never had to rebuild it.
+		scenarios.reinstate(mentor.applicationId());
+
+		mvc.perform(get("/api/mentors").param("field", "education"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$[?(@.displayName == 'Maria Montessori')].priceAmount").value(70.00))
+				.andExpect(jsonPath("$[?(@.displayName == 'Maria Montessori')].meetingDurationMinutes")
+						.value(45));
 	}
 
 	@Test

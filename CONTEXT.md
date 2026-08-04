@@ -23,8 +23,16 @@ rejected). This gate exists because Mentees are minors meeting adults.
 
 **Reviewer**:
 An internal, trusted actor (staff) who reviews Mentor applications and can
-suspend Mentors. Not a Mentor or Mentee.
+suspend and reinstate Mentors. Not a Mentor or Mentee.
 _Avoid_: Admin, moderator
+
+**Suspended**:
+An approved Mentor a Reviewer has taken out of circulation: hidden from
+discovery and unbookable, but still approved — suspension is a flag on the
+Mentor application, never a lifecycle status, and it destroys nothing. The
+reverse is to **reinstate** them, after which they are findable again with the
+Mentor profile they kept throughout.
+_Avoid_: Ban, deactivate, disable, unsuspend
 
 **Guardian**:
 The parent/guardian a minor Mentee names at signup. Not a User of the product;

@@ -109,6 +109,12 @@ class MentorshipService implements MentorBookability {
 		return view(application);
 	}
 
+	MentorApplicationView reinstate(UUID applicationId) {
+		MentorApplication application = require(applicationId);
+		application.reinstate(clock.now());
+		return view(application);
+	}
+
 	@Override
 	@Transactional(readOnly = true)
 	public boolean isBookable(UUID mentorUserId) {

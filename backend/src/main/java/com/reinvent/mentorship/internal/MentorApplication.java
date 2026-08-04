@@ -142,6 +142,21 @@ class MentorApplication {
 		this.updatedAt = now;
 	}
 
+	/**
+	 * A Reviewer lifts the suspension, putting the Mentor back in circulation. Nothing
+	 * about their presentation was destroyed while they were hidden, so there is nothing
+	 * to restore beyond the flag — they are discoverable again the moment this returns
+	 * (given a complete profile).
+	 */
+	void reinstate(Instant now) {
+		requireStatus(ApplicationStatus.APPROVED, "reinstate the Mentor of");
+		if (!suspended) {
+			throw new IllegalApplicationTransitionException("This Mentor is not suspended.");
+		}
+		this.suspended = false;
+		this.updatedAt = now;
+	}
+
 	private void requireStatus(ApplicationStatus expected, String action) {
 		if (status != expected) {
 			throw new IllegalApplicationTransitionException(

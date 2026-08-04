@@ -67,4 +67,11 @@ class ReviewerController {
 		currentUser.requireRole(Role.REVIEWER);
 		return mentorship.suspend(id);
 	}
+
+	/** Lift a suspension: the Mentor becomes findable and bookable again. */
+	@PostMapping("/{id}/reinstate")
+	MentorApplicationView reinstate(@PathVariable UUID id) {
+		currentUser.requireRole(Role.REVIEWER);
+		return mentorship.reinstate(id);
+	}
 }

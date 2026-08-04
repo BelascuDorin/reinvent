@@ -85,6 +85,12 @@ class MentorshipScenarios {
 				.andExpect(status().isOk());
 	}
 
+	/** The Reviewer lifts a suspension, putting the Mentor back in circulation. */
+	void reinstate(String applicationId) throws Exception {
+		mvc.perform(post("/api/reviewer/applications/{id}/reinstate", applicationId).session(reviewer()))
+				.andExpect(status().isOk());
+	}
+
 	String applyAndReturnId(MockHttpSession session) throws Exception {
 		MvcResult result = mvc.perform(post("/api/mentor-applications").session(session))
 				.andExpect(status().isCreated())

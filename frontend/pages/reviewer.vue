@@ -22,7 +22,7 @@ async function refresh() {
   await Promise.all([refreshQueue(), refreshMentors()])
 }
 
-async function act(id: string, action: 'start-review' | 'approve' | 'suspend') {
+async function act(id: string, action: 'start-review' | 'approve' | 'suspend' | 'reinstate') {
   await $fetch(`/api/reviewer/applications/${id}/${action}`, { method: 'POST' })
   await refresh()
 }
@@ -64,6 +64,7 @@ async function reject(id: string) {
           <li v-for="mentor in mentors" :key="mentor.id">
             <span>{{ mentor.applicantUserId }} — {{ mentor.suspended ? 'suspended' : 'active' }}</span>
             <button v-if="!mentor.suspended" @click="act(mentor.id, 'suspend')">Suspend</button>
+            <button v-else @click="act(mentor.id, 'reinstate')">Reinstate</button>
           </li>
         </ul>
       </section>

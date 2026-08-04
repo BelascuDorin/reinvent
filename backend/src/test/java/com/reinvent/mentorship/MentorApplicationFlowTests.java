@@ -162,4 +162,56 @@ class MentorApplicationFlowTests {
 				.andExpect(jsonPath("$.bookable").value(false));
 	}
 
+	@Test
+	void reviewerReinstatesASuspendedMentor() throws Exception {
+		MockHttpSession applicant = scenarios.signUpAndLogIn("gets-reinstated@example.com");
+		String applicationId = scenarios.applyAndReturnId(applicant);
+
+		MockHttpSession reviewer = scenarios.reviewer();
+		mvc.perform(post("/api/reviewer/applications/{id}/start-review", applicationId).session(reviewer));
+		mvc.perform(post("/api/reviewer/applications/{id}/approve", applicationId).session(reviewer));
+		mvc.perform(post("/api/reviewer/applications/{id}/suspend", applicationId).session(reviewer))
+				.andExpect(jsonPath("$.suspended").value(true));
+
+		// Reinstating puts the Mentor back in circulation. The application was APPROVED
+		// throughout — suspension is a flag, never a lifecycle status.
+		mvc.perform(post("/api/reviewer/applications/{id}/reinstate", applicationId).session(reviewer))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.status").value("APPROVED"))
+				.andExpect(jsonPath("$.suspended").value(false));
+
+		mvc.perform(get("/api/mentor-applications/me").session(applicant))
+				.andExpect(jsonPath("$.suspended").value(false));
+	}
+
+	@Test
+	void reinstatingAMentorWhoIsNotSuspendedIsRefused() throws Exception {
+		MockHttpSession applicant = scenarios.signUpAndLogIn("never-suspended@example.com");
+		String applicationId = scenarios.applyAndReturnId(applicant);
+
+		MockHttpSession reviewer = scenarios.reviewer();
+
+		// Not even approved yet, let alone suspended.
+		mvc.perform(post("/api/reviewer/applications/{id}/reinstate", applicationId).session(reviewer))
+				.andExpect(status().isConflict());
+
+		mvc.perform(post("/api/reviewer/applications/{id}/start-review", applicationId).session(reviewer));
+		mvc.perform(post("/api/reviewer/applications/{id}/approve", applicationId).session(reviewer));
+
+		// Approved and in circulation: there is no suspension to lift.
+		mvc.perform(post("/api/reviewer/applications/{id}/reinstate", applicationId).session(reviewer))
+				.andExpect(status().isConflict());
+	}
+
+	@Test
+	void reinstatingIsRefusedToNonReviewers() throws Exception {
+		MockHttpSession applicant = scenarios.signUpAndLogIn("cannot-reinstate-self@example.com");
+		String applicationId = scenarios.applyAndReturnId(applicant);
+
+		mvc.perform(post("/api/reviewer/applications/{id}/reinstate", applicationId))
+				.andExpect(status().isUnauthorized());
+		mvc.perform(post("/api/reviewer/applications/{id}/reinstate", applicationId).session(applicant))
+				.andExpect(status().isForbidden());
+	}
+
 }
