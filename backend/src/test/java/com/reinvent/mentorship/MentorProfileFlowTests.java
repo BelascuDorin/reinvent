@@ -74,18 +74,9 @@ class MentorProfileFlowTests {
 
 	@Test
 	void anApprovedMentorReadsTheirDraftProfileWhichIsNotYetDiscoverable() throws Exception {
-		MockHttpSession applicant = signUpAndLogIn("reads-own-profile@example.com");
-		String applicationId = applyAndReturnId(applicant);
+		MockHttpSession mentor = approvedMentor("reads-own-profile@example.com");
 
-		MockHttpSession reviewer = logIn(REVIEWER_EMAIL, REVIEWER_PASSWORD);
-		mvc.perform(post("/api/reviewer/applications/{id}/start-review", applicationId).session(reviewer))
-				.andExpect(status().isOk());
-		mvc.perform(post("/api/reviewer/applications/{id}/approve", applicationId).session(reviewer))
-				.andExpect(status().isOk());
-
-		// The MENTOR role is granted asynchronously on MentorApproved; only then is the
-		// profile endpoint reachable.
-		await().atMost(TIMEOUT).untilAsserted(() -> mvc.perform(get("/api/mentor-profiles/me").session(applicant))
+		mvc.perform(get("/api/mentor-profiles/me").session(mentor))
 				.andExpect(status().isOk())
 				// The profile returned is the caller's own (the /me endpoint is scoped to
 				// their session id), so a Mentor can only ever read their own.
@@ -94,7 +85,7 @@ class MentorProfileFlowTests {
 				.andExpect(jsonPath("$.discoverable").value(false))
 				.andExpect(jsonPath("$.fieldSlugs").isEmpty())
 				.andExpect(jsonPath("$.priceAmount").doesNotExist())
-				.andExpect(jsonPath("$.meetingDurationMinutes").doesNotExist()));
+				.andExpect(jsonPath("$.meetingDurationMinutes").doesNotExist());
 	}
 
 	@Test
@@ -125,18 +116,28 @@ class MentorProfileFlowTests {
 				.andExpect(jsonPath("$.discoverable").value(true));
 
 		// Clearing a required field (here: all Fields) drops discoverability without
-		// destroying the rest of the profile data.
+		// destroying the rest of the profile data — every other field the Mentor filled
+		// in is still there afterwards, so completing again costs them no retyping.
 		mvc.perform(put("/api/mentor-profiles/me").session(mentor)
 				.contentType(MediaType.APPLICATION_JSON).content("""
-						{"displayName":"Ada Lovelace","roleTitle":"Engineer","bio":"","experience":"",
-						 "employer":"Analytical Engines","priceAmount":120.00,"priceCurrency":"USD",
-						 "meetingDurationMinutes":45,"fieldSlugs":[],"languages":["en"]}
+						{"displayName":"Ada Lovelace","roleTitle":"Engineer","bio":"I build things.",
+						 "experience":"10 years","employer":"Analytical Engines","priceAmount":120.00,
+						 "priceCurrency":"USD","meetingDurationMinutes":45,"fieldSlugs":[],
+						 "languages":["en"]}
 						"""))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.displayName").value("Ada Lovelace"))
 				.andExpect(jsonPath("$.fieldSlugs").isEmpty())
 				.andExpect(jsonPath("$.complete").value(false))
-				.andExpect(jsonPath("$.discoverable").value(false));
+				.andExpect(jsonPath("$.discoverable").value(false))
+				.andExpect(jsonPath("$.displayName").value("Ada Lovelace"))
+				.andExpect(jsonPath("$.roleTitle").value("Engineer"))
+				.andExpect(jsonPath("$.bio").value("I build things."))
+				.andExpect(jsonPath("$.experience").value("10 years"))
+				.andExpect(jsonPath("$.employer").value("Analytical Engines"))
+				.andExpect(jsonPath("$.priceAmount").value(120.00))
+				.andExpect(jsonPath("$.priceCurrency").value("USD"))
+				.andExpect(jsonPath("$.meetingDurationMinutes").value(45))
+				.andExpect(jsonPath("$.languages", org.hamcrest.Matchers.contains("en")));
 	}
 
 	@Test
@@ -165,6 +166,44 @@ class MentorProfileFlowTests {
 						 "meetingDurationMinutes":60,"fieldSlugs":["underwater-basket-weaving"],"languages":["en"]}
 						"""))
 				.andExpect(status().isBadRequest());
+
+		// A null slug names no curated Field either, so it is refused the same way
+		// rather than blowing up on the way to the vocabulary.
+		mvc.perform(put("/api/mentor-profiles/me").session(mentor)
+				.contentType(MediaType.APPLICATION_JSON).content("""
+						{"displayName":"Alan Turing","roleTitle":"Engineer","bio":"","experience":"",
+						 "employer":"","priceAmount":100.00,"priceCurrency":"USD",
+						 "meetingDurationMinutes":60,"fieldSlugs":[null],"languages":["en"]}
+						"""))
+				.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void anAbsurdPriceOrMeetingDurationIsRefused() throws Exception {
+		MockHttpSession mentor = approvedMentor("absurd-quantities@example.com");
+
+		// A zero-minute Meeting and a negative price would otherwise count as "filled
+		// in" and make the Mentor discoverable on nonsense terms.
+		mvc.perform(put("/api/mentor-profiles/me").session(mentor)
+				.contentType(MediaType.APPLICATION_JSON).content("""
+						{"displayName":"Ada Lovelace","roleTitle":"Engineer","bio":"","experience":"",
+						 "employer":"","priceAmount":120.00,"priceCurrency":"USD",
+						 "meetingDurationMinutes":0,"fieldSlugs":["software-engineering"],"languages":["en"]}
+						"""))
+				.andExpect(status().isBadRequest());
+
+		mvc.perform(put("/api/mentor-profiles/me").session(mentor)
+				.contentType(MediaType.APPLICATION_JSON).content("""
+						{"displayName":"Ada Lovelace","roleTitle":"Engineer","bio":"","experience":"",
+						 "employer":"","priceAmount":-1.00,"priceCurrency":"USD",
+						 "meetingDurationMinutes":45,"fieldSlugs":["software-engineering"],"languages":["en"]}
+						"""))
+				.andExpect(status().isBadRequest());
+
+		// Neither attempt touched the draft.
+		mvc.perform(get("/api/mentor-profiles/me").session(mentor))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.complete").value(false));
 	}
 
 	@Test

@@ -78,15 +78,17 @@ function toForm(p: MentorProfile | null): ProfileForm {
 
 const form = ref<ProfileForm>(toForm(profile.value ?? null))
 
-// What's still missing before this Mentor appears in discovery.
+// What's still missing before this Mentor appears in discovery. The server's `complete`
+// flag is the authority on whether anything is missing at all — this only names the gaps,
+// so a rule the two disagree on can never show "complete" over an incomplete profile.
 const missing = computed(() => {
   const p = profile.value
-  if (!p) return []
+  if (!p || p.complete) return []
   const gaps: string[] = []
   if (p.fieldSlugs.length === 0) gaps.push('at least one Field')
-  if (p.priceAmount == null) gaps.push('a price')
+  if (p.priceAmount == null || !p.priceCurrency) gaps.push('a price')
   if (p.meetingDurationMinutes == null) gaps.push('a Meeting duration')
-  return gaps
+  return gaps.length ? gaps : ['a few more details']
 })
 
 async function apply() {

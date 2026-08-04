@@ -6,6 +6,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.validation.Valid;
+
 import com.reinvent.identity.CurrentUser;
 import com.reinvent.identity.Role;
 
@@ -33,7 +35,7 @@ class MentorProfileController {
 	}
 
 	@PutMapping("/me")
-	MentorProfileView update(@RequestBody UpdateMentorProfileRequest edit) {
+	MentorProfileView update(@RequestBody @Valid UpdateMentorProfileRequest edit) {
 		currentUser.requireRole(Role.MENTOR);
 		return mentorProfiles.updateMyProfile(currentUser.requireUserId(), edit);
 	}

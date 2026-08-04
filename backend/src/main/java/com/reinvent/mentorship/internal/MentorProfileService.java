@@ -1,8 +1,6 @@
 package com.reinvent.mentorship.internal;
 
 import java.time.Instant;
-import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -11,7 +9,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.reinvent.platform.Clock;
 
 /**
- * The Mentor profile read-side and its provisioning (spec 0002). Profiles are created
+ * The Mentor profile: its provisioning, the owner's edits, and the owner's read
+ * (spec 0002). Profiles are created
  * as a draft when the Reviewer approves a Mentor — an intra-module reaction driven by
  * {@link MentorshipService#approve}, with no new cross-module event. Discoverability
  * composes the profile-local completeness rule with the application's approved-and-
@@ -25,14 +24,14 @@ class MentorProfileService {
 
 	private final MentorProfileRepository profiles;
 	private final MentorApplicationRepository applications;
-	private final FieldRepository fields;
+	private final FieldCatalog fieldCatalog;
 	private final Clock clock;
 
 	MentorProfileService(MentorProfileRepository profiles, MentorApplicationRepository applications,
-			FieldRepository fields, Clock clock) {
+			FieldCatalog fieldCatalog, Clock clock) {
 		this.profiles = profiles;
 		this.applications = applications;
-		this.fields = fields;
+		this.fieldCatalog = fieldCatalog;
 		this.clock = clock;
 	}
 
@@ -50,7 +49,7 @@ class MentorProfileService {
 	@Transactional(readOnly = true)
 	MentorProfileView myProfile(UUID userId) {
 		MentorProfile profile = profiles.findById(userId).orElseThrow(MentorProfileNotFoundException::new);
-		return view(profile, userId);
+		return view(profile);
 	}
 
 	/**
@@ -62,10 +61,11 @@ class MentorProfileService {
 	 */
 	MentorProfileView updateMyProfile(UUID userId, UpdateMentorProfileRequest edit) {
 		MentorProfile profile = profiles.findById(userId).orElseThrow(MentorProfileNotFoundException::new);
-		requireCuratedFields(edit.fieldSlugs());
+		if (!fieldCatalog.containsAll(edit.fieldSlugs())) {
+			throw new UnknownFieldException();
+		}
 		profile.update(edit, clock.now());
-		profiles.save(profile);
-		return view(profile, userId);
+		return view(profile);
 	}
 
 	/**
@@ -74,22 +74,10 @@ class MentorProfileService {
 	 * — deliberately weaker than MentorBookability, which additionally gates on payment
 	 * onboarding (a booking-time concern, not a discovery one).
 	 */
-	private MentorProfileView view(MentorProfile profile, UUID userId) {
+	private MentorProfileView view(MentorProfile profile) {
 		boolean complete = profile.isComplete();
-		boolean discoverable = complete && isActiveMentor(userId);
+		boolean discoverable = complete && isActiveMentor(profile.mentorUserId());
 		return MentorProfileView.of(profile, complete, discoverable);
-	}
-
-	/** Every chosen Field slug must exist in the curated vocabulary, or the edit fails. */
-	private void requireCuratedFields(List<String> slugs) {
-		if (slugs == null || slugs.isEmpty()) {
-			return;
-		}
-		Set<String> requested = Set.copyOf(slugs);
-		long curated = fields.findAllById(requested).size();
-		if (curated != requested.size()) {
-			throw new UnknownFieldException();
-		}
 	}
 
 	private boolean isActiveMentor(UUID userId) {
