@@ -15,11 +15,11 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/api/mentors")
-class MentorDirectoryController {
+class MentorDiscoveryController {
 
-	private final MentorDirectory directory;
+	private final MentorDiscovery directory;
 
-	MentorDirectoryController(MentorDirectory directory) {
+	MentorDiscoveryController(MentorDiscovery directory) {
 		this.directory = directory;
 	}
 

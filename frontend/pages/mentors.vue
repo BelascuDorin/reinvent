@@ -34,10 +34,10 @@ function search() {
 }
 
 const fieldName = (slug: string) => fields.value?.find((f) => f.slug === slug)?.displayName ?? slug
-const price = (mentor: MentorSummary) =>
-  mentor.priceAmount != null && mentor.priceCurrency
-    ? `${mentor.priceAmount} ${mentor.priceCurrency}`
-    : 'Price on request'
+
+// Every listed Mentor is discoverable, which means a price and a Meeting duration are
+// set — so there is no missing-price case to render here.
+const price = (mentor: MentorSummary) => `${mentor.priceAmount} ${mentor.priceCurrency}`
 </script>
 
 <template>
@@ -69,16 +69,10 @@ const price = (mentor: MentorSummary) =>
     <ul v-else>
       <li v-for="mentor in mentors" :key="mentor.mentorUserId">
         <h2>{{ mentor.displayName ?? 'A Mentor' }}</h2>
-        <p v-if="mentor.roleTitle">
-          {{ mentor.roleTitle }}<span v-if="mentor.employer"> at {{ mentor.employer }}</span>
-        </p>
+        <p v-if="mentor.roleTitle">{{ mentor.roleTitle }}</p>
         <p>{{ price(mentor) }} · {{ mentor.meetingDurationMinutes }} minute Meeting</p>
         <p>Fields: {{ mentor.fieldSlugs.map(fieldName).join(', ') }}</p>
         <p v-if="mentor.languages.length">Speaks: {{ mentor.languages.join(', ') }}</p>
-        <p v-if="mentor.ratingSummary">
-          Rated {{ mentor.ratingSummary.averageRating }} from
-          {{ mentor.ratingSummary.reviewCount }} reviews
-        </p>
       </li>
     </ul>
   </main>

@@ -22,13 +22,26 @@ export interface MentorSummary {
   mentorUserId: string
   displayName: string | null
   roleTitle: string | null
-  employer: string | null
   priceAmount: number | null
   priceCurrency: string | null
   meetingDurationMinutes: number | null
   fieldSlugs: string[]
   languages: string[]
   ratingSummary: RatingSummary | null
+}
+
+/**
+ * A Mentor application and where it stands. `suspended` is separate from `status`: a
+ * suspended Mentor is still APPROVED. `bookable` additionally requires payment
+ * onboarding, which discovery deliberately ignores.
+ */
+export interface MentorApplication {
+  id: string
+  applicantUserId: string
+  status: 'APPLIED' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED'
+  rejectionReason: string | null
+  suspended: boolean
+  bookable: boolean
 }
 
 /** The signed-in Mentor's own view of their profile, including where they stand. */

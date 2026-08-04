@@ -12,7 +12,12 @@ const { data: fields } = await useFetch<Field[]>('/api/fields')
     <p>The career areas you can find a Mentor in on Reinvent.</p>
     <p v-if="!fields || fields.length === 0">No Fields are available yet.</p>
     <ul v-else>
-      <li v-for="field in fields" :key="field.slug">{{ field.displayName }}</li>
+      <li v-for="field in fields" :key="field.slug">
+        <!-- Each Field links into discovery, so a crawler reaches the Mentors too. -->
+        <NuxtLink :to="{ path: '/mentors', query: { field: field.slug } }">
+          {{ field.displayName }}
+        </NuxtLink>
+      </li>
     </ul>
   </main>
 </template>

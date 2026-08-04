@@ -1,8 +1,11 @@
 package com.reinvent.mentorship;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.util.List;
 
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,7 +18,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
+import com.jayway.jsonpath.JsonPath;
 import com.reinvent.TestcontainersConfiguration;
 import com.reinvent.mentorship.MentorshipScenarios.ApprovedMentor;
 import com.reinvent.platform.PaymentGateway;
@@ -124,6 +129,16 @@ class MentorDiscoveryFlowTests {
 
 	@Test
 	void aFieldWithNoDiscoverableMentorsIsAnEmptyListNotAnError() throws Exception {
+		// A discoverable Mentor exists — just not in this Field — so an empty answer here
+		// means "nobody in entrepreneurship", not "discovery returns nothing to anyone".
+		ApprovedMentor elsewhere = scenarios.approvedMentor("discovery-elsewhere@example.com");
+		scenarios.saveProfile(elsewhere.session(),
+				profile("Buckminster Fuller", "Designer", "design", "en", 95.00, 30));
+
+		mvc.perform(get("/api/mentors").param("field", "design"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$[?(@.displayName == 'Buckminster Fuller')]").exists());
+
 		mvc.perform(get("/api/mentors").param("field", "entrepreneurship"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$").isArray())
@@ -179,10 +194,14 @@ class MentorDiscoveryFlowTests {
 		scenarios.saveProfile(first.session(), profile("Abigail Adams", "Analyst", "finance", "en", 110.00, 30));
 
 		// Ordered by display name, not by when they joined — the later signup comes first.
-		mvc.perform(get("/api/mentors").param("field", "finance"))
+		// Asserted as a relative position rather than an absolute index, because other
+		// tests may leave their own discoverable Mentors in this Field.
+		MvcResult result = mvc.perform(get("/api/mentors").param("field", "finance"))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$[0].displayName").value("Abigail Adams"))
-				.andExpect(jsonPath("$[1].displayName").value("Zelda Fitzgerald"));
+				.andReturn();
+		List<String> names = JsonPath.read(result.getResponse().getContentAsString(), "$[*].displayName");
+
+		assertThat(names).containsSubsequence("Abigail Adams", "Zelda Fitzgerald");
 	}
 
 	/** A complete, discoverable profile in one Field and one language. */

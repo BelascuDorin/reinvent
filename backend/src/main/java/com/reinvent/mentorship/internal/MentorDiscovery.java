@@ -26,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 @Transactional(readOnly = true)
-class MentorDirectory {
+class MentorDiscovery {
 
 	/**
 	 * A stable browse order, so the same search always reads the same way: by display
@@ -40,7 +40,7 @@ class MentorDirectory {
 	private final MentorProfileRepository profiles;
 	private final MentorApplicationRepository applications;
 
-	MentorDirectory(MentorProfileRepository profiles, MentorApplicationRepository applications) {
+	MentorDiscovery(MentorProfileRepository profiles, MentorApplicationRepository applications) {
 		this.profiles = profiles;
 		this.applications = applications;
 	}
@@ -51,7 +51,7 @@ class MentorDirectory {
 	 * "don't narrow on it". A search nobody matches is an empty list, not an error.
 	 */
 	List<MentorSummaryView> search(String fieldSlug, String language) {
-		List<MentorProfile> matching = profiles.findMatching(criterion(fieldSlug), criterion(language));
+		List<MentorProfile> matching = profiles.findMatching(omittedIfBlank(fieldSlug), omittedIfBlank(language));
 		Set<UUID> activeMentors = activeMentorsAmong(matching.stream().map(MentorProfile::mentorUserId).toList());
 
 		return matching.stream()
@@ -80,8 +80,8 @@ class MentorDirectory {
 				.collect(Collectors.toSet());
 	}
 
-	/** An omitted or blank search box narrows nothing. */
-	private static String criterion(String value) {
+	/** An empty search box narrows nothing, so blank reads the same as absent. */
+	private static String omittedIfBlank(String value) {
 		return value == null || value.isBlank() ? null : value.strip();
 	}
 }

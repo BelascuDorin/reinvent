@@ -1,12 +1,5 @@
 <script setup lang="ts">
-interface MentorApplication {
-  id: string
-  applicantUserId: string
-  status: 'APPLIED' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED'
-  rejectionReason: string | null
-  suspended: boolean
-  bookable: boolean
-}
+import type { MentorApplication } from '~/types/mentorship'
 
 const request = useBackendFetch()
 

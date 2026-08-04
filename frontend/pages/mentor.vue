@@ -1,13 +1,5 @@
 <script setup lang="ts">
-import type { Field, MentorProfile } from '~/types/mentorship'
-
-interface MentorApplication {
-  id: string
-  status: 'APPLIED' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED'
-  rejectionReason: string | null
-  suspended: boolean
-  bookable: boolean
-}
+import type { Field, MentorApplication, MentorProfile } from '~/types/mentorship'
 
 interface ProfileForm {
   displayName: string
