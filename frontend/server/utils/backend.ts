@@ -7,7 +7,7 @@ import type { H3Event } from 'h3'
 export async function proxyToBackend(
   event: H3Event,
   path: string,
-  options: { method?: string; body?: unknown } = {},
+  options: { method?: string; body?: unknown; query?: Record<string, unknown> } = {},
 ) {
   const { backendBaseUrl } = useRuntimeConfig()
   const cookie = getRequestHeader(event, 'cookie')
@@ -15,6 +15,7 @@ export async function proxyToBackend(
   const response = await $fetch.raw(`${backendBaseUrl}${path}`, {
     method: (options.method ?? 'GET') as never,
     body: options.body as never,
+    query: options.query,
     headers: cookie ? { cookie } : undefined,
     ignoreResponseError: true,
   })

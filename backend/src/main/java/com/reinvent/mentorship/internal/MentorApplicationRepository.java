@@ -15,4 +15,11 @@ interface MentorApplicationRepository extends JpaRepository<MentorApplication, U
 	boolean existsByApplicantUserIdAndStatusIn(UUID applicantUserId, Collection<ApplicationStatus> statuses);
 
 	List<MentorApplication> findByStatusInOrderByCreatedAtAsc(Collection<ApplicationStatus> statuses);
+
+	/**
+	 * The applications of several Users at once, newest first — so a caller asking about
+	 * a batch of Users can pick each one's latest without a query per User. Same
+	 * "read the latest, keep the history" rule as the single-User lookup above.
+	 */
+	List<MentorApplication> findByApplicantUserIdInOrderByCreatedAtDesc(Collection<UUID> applicantUserIds);
 }

@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.time.Duration;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -19,9 +20,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 
-import com.jayway.jsonpath.JsonPath;
 import com.reinvent.TestcontainersConfiguration;
 import com.reinvent.platform.PaymentGateway;
 import com.reinvent.platform.testing.InMemoryPaymentGateway;
@@ -51,15 +50,20 @@ class MentorApplicationFlowTests {
 	}
 
 	private static final Duration TIMEOUT = Duration.ofSeconds(10);
-	private static final String REVIEWER_EMAIL = "reviewer@reinvent.example";
-	private static final String REVIEWER_PASSWORD = "reviewer-dev-password";
 
 	@Autowired
 	MockMvc mvc;
 
+	private MentorshipScenarios scenarios;
+
+	@BeforeEach
+	void setUp() {
+		scenarios = new MentorshipScenarios(mvc);
+	}
+
 	@Test
 	void anApplicantAppliesAndSeesTheirStatus() throws Exception {
-		MockHttpSession session = signUpAndLogIn("applicant-status@example.com");
+		MockHttpSession session = scenarios.signUpAndLogIn("applicant-status@example.com");
 
 		mvc.perform(post("/api/mentor-applications").session(session))
 				.andExpect(status().isCreated())
@@ -78,7 +82,7 @@ class MentorApplicationFlowTests {
 
 	@Test
 	void aUserCannotApplyTwiceWhileOpen() throws Exception {
-		MockHttpSession session = signUpAndLogIn("applicant-dup@example.com");
+		MockHttpSession session = scenarios.signUpAndLogIn("applicant-dup@example.com");
 		mvc.perform(post("/api/mentor-applications").session(session)).andExpect(status().isCreated());
 
 		mvc.perform(post("/api/mentor-applications").session(session)).andExpect(status().isConflict());
@@ -86,7 +90,7 @@ class MentorApplicationFlowTests {
 
 	@Test
 	void reviewerActionsAreRefusedToNonReviewers() throws Exception {
-		MockHttpSession mentee = signUpAndLogIn("just-a-mentee@example.com");
+		MockHttpSession mentee = scenarios.signUpAndLogIn("just-a-mentee@example.com");
 
 		mvc.perform(get("/api/reviewer/applications").session(mentee)).andExpect(status().isForbidden());
 		mvc.perform(get("/api/reviewer/applications")).andExpect(status().isUnauthorized());
@@ -94,10 +98,10 @@ class MentorApplicationFlowTests {
 
 	@Test
 	void reviewerApprovesAndTheApplicantGainsTheMentorRole() throws Exception {
-		MockHttpSession applicant = signUpAndLogIn("becomes-mentor@example.com");
-		String applicationId = applyAndReturnId(applicant);
+		MockHttpSession applicant = scenarios.signUpAndLogIn("becomes-mentor@example.com");
+		String applicationId = scenarios.applyAndReturnId(applicant);
 
-		MockHttpSession reviewer = logIn(REVIEWER_EMAIL, REVIEWER_PASSWORD);
+		MockHttpSession reviewer = scenarios.reviewer();
 		mvc.perform(get("/api/reviewer/applications").session(reviewer))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$[?(@.id == '%s')]".formatted(applicationId)).exists());
@@ -120,10 +124,10 @@ class MentorApplicationFlowTests {
 
 	@Test
 	void reviewerRejectsWithAReason() throws Exception {
-		MockHttpSession applicant = signUpAndLogIn("gets-rejected@example.com");
-		String applicationId = applyAndReturnId(applicant);
+		MockHttpSession applicant = scenarios.signUpAndLogIn("gets-rejected@example.com");
+		String applicationId = scenarios.applyAndReturnId(applicant);
 
-		MockHttpSession reviewer = logIn(REVIEWER_EMAIL, REVIEWER_PASSWORD);
+		MockHttpSession reviewer = scenarios.reviewer();
 		mvc.perform(post("/api/reviewer/applications/{id}/start-review", applicationId).session(reviewer))
 				.andExpect(status().isOk());
 		mvc.perform(post("/api/reviewer/applications/{id}/reject", applicationId).session(reviewer)
@@ -140,10 +144,10 @@ class MentorApplicationFlowTests {
 
 	@Test
 	void reviewerSuspendsAnApprovedMentor() throws Exception {
-		MockHttpSession applicant = signUpAndLogIn("gets-suspended@example.com");
-		String applicationId = applyAndReturnId(applicant);
+		MockHttpSession applicant = scenarios.signUpAndLogIn("gets-suspended@example.com");
+		String applicationId = scenarios.applyAndReturnId(applicant);
 
-		MockHttpSession reviewer = logIn(REVIEWER_EMAIL, REVIEWER_PASSWORD);
+		MockHttpSession reviewer = scenarios.reviewer();
 		mvc.perform(post("/api/reviewer/applications/{id}/start-review", applicationId).session(reviewer));
 		mvc.perform(post("/api/reviewer/applications/{id}/approve", applicationId).session(reviewer));
 
@@ -158,29 +162,4 @@ class MentorApplicationFlowTests {
 				.andExpect(jsonPath("$.bookable").value(false));
 	}
 
-	private String applyAndReturnId(MockHttpSession session) throws Exception {
-		MvcResult result = mvc.perform(post("/api/mentor-applications").session(session))
-				.andExpect(status().isCreated())
-				.andReturn();
-		return JsonPath.read(result.getResponse().getContentAsString(), "$.id");
-	}
-
-	private MockHttpSession signUpAndLogIn(String email) throws Exception {
-		mvc.perform(post("/api/auth/signup").contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{"email":"%s","password":"password1","dateOfBirth":"1990-01-01"}
-						""".formatted(email)))
-				.andExpect(status().isCreated());
-		return logIn(email, "password1");
-	}
-
-	private MockHttpSession logIn(String email, String password) throws Exception {
-		MvcResult result = mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{"email":"%s","password":"%s"}
-						""".formatted(email, password)))
-				.andExpect(status().isOk())
-				.andReturn();
-		return (MockHttpSession) result.getRequest().getSession(false);
-	}
 }

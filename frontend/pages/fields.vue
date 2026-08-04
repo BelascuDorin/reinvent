@@ -1,8 +1,5 @@
 <script setup lang="ts">
-interface Field {
-  slug: string
-  displayName: string
-}
+import type { Field } from '~/types/mentorship'
 
 // The curated career areas a visitor can explore — a public, server-rendered read
 // through the BFF (no account needed), so the list is shareable and indexable.

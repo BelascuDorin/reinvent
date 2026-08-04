@@ -1,14 +1,11 @@
 package com.reinvent.mentorship;
 
-import static org.awaitility.Awaitility.await;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.time.Duration;
-
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -20,9 +17,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 
-import com.jayway.jsonpath.JsonPath;
 import com.reinvent.TestcontainersConfiguration;
 import com.reinvent.platform.PaymentGateway;
 import com.reinvent.platform.testing.InMemoryPaymentGateway;
@@ -49,10 +44,6 @@ class MentorProfileFlowTests {
 		}
 	}
 
-	private static final Duration TIMEOUT = Duration.ofSeconds(10);
-	private static final String REVIEWER_EMAIL = "reviewer@reinvent.example";
-	private static final String REVIEWER_PASSWORD = "reviewer-dev-password";
-
 	/** A fully filled-in, discoverable profile (≥1 Field, price, Meeting duration). */
 	private static final String COMPLETE_PROFILE = """
 			{"displayName":"Ada Lovelace","roleTitle":"Engineer","bio":"I build things.",
@@ -64,17 +55,24 @@ class MentorProfileFlowTests {
 	@Autowired
 	MockMvc mvc;
 
+	private MentorshipScenarios scenarios;
+
+	@BeforeEach
+	void setUp() {
+		scenarios = new MentorshipScenarios(mvc);
+	}
+
 	@Test
 	void readingTheProfileRequiresTheMentorRole() throws Exception {
 		mvc.perform(get("/api/mentor-profiles/me")).andExpect(status().isUnauthorized());
 
-		MockHttpSession mentee = signUpAndLogIn("just-a-mentee-profile@example.com");
+		MockHttpSession mentee = scenarios.signUpAndLogIn("just-a-mentee-profile@example.com");
 		mvc.perform(get("/api/mentor-profiles/me").session(mentee)).andExpect(status().isForbidden());
 	}
 
 	@Test
 	void anApprovedMentorReadsTheirDraftProfileWhichIsNotYetDiscoverable() throws Exception {
-		MockHttpSession mentor = approvedMentor("reads-own-profile@example.com");
+		MockHttpSession mentor = scenarios.approvedMentor("reads-own-profile@example.com").session();
 
 		mvc.perform(get("/api/mentor-profiles/me").session(mentor))
 				.andExpect(status().isOk())
@@ -93,7 +91,7 @@ class MentorProfileFlowTests {
 		mvc.perform(put("/api/mentor-profiles/me").contentType(MediaType.APPLICATION_JSON).content(COMPLETE_PROFILE))
 				.andExpect(status().isUnauthorized());
 
-		MockHttpSession mentee = signUpAndLogIn("mentee-cannot-edit@example.com");
+		MockHttpSession mentee = scenarios.signUpAndLogIn("mentee-cannot-edit@example.com");
 		mvc.perform(put("/api/mentor-profiles/me").session(mentee)
 				.contentType(MediaType.APPLICATION_JSON).content(COMPLETE_PROFILE))
 				.andExpect(status().isForbidden());
@@ -101,7 +99,7 @@ class MentorProfileFlowTests {
 
 	@Test
 	void completingTheDraftMakesTheMentorDiscoverableAndClearingItRemovesThem() throws Exception {
-		MockHttpSession mentor = approvedMentor("completes-profile@example.com");
+		MockHttpSession mentor = scenarios.approvedMentor("completes-profile@example.com").session();
 
 		mvc.perform(put("/api/mentor-profiles/me").session(mentor)
 				.contentType(MediaType.APPLICATION_JSON).content(COMPLETE_PROFILE))
@@ -142,7 +140,7 @@ class MentorProfileFlowTests {
 
 	@Test
 	void anEmptyEmployerIsAccepted() throws Exception {
-		MockHttpSession mentor = approvedMentor("blank-employer@example.com");
+		MockHttpSession mentor = scenarios.approvedMentor("blank-employer@example.com").session();
 
 		mvc.perform(put("/api/mentor-profiles/me").session(mentor)
 				.contentType(MediaType.APPLICATION_JSON).content("""
@@ -157,7 +155,7 @@ class MentorProfileFlowTests {
 
 	@Test
 	void aFieldOutsideTheCuratedSetIsRejected() throws Exception {
-		MockHttpSession mentor = approvedMentor("bad-field@example.com");
+		MockHttpSession mentor = scenarios.approvedMentor("bad-field@example.com").session();
 
 		mvc.perform(put("/api/mentor-profiles/me").session(mentor)
 				.contentType(MediaType.APPLICATION_JSON).content("""
@@ -180,7 +178,7 @@ class MentorProfileFlowTests {
 
 	@Test
 	void anAbsurdPriceOrMeetingDurationIsRefused() throws Exception {
-		MockHttpSession mentor = approvedMentor("absurd-quantities@example.com");
+		MockHttpSession mentor = scenarios.approvedMentor("absurd-quantities@example.com").session();
 
 		// A zero-minute Meeting and a negative price would otherwise count as "filled
 		// in" and make the Mentor discoverable on nonsense terms.
@@ -208,8 +206,8 @@ class MentorProfileFlowTests {
 
 	@Test
 	void editsAreScopedToTheCallersOwnProfile() throws Exception {
-		MockHttpSession first = approvedMentor("owner-one@example.com");
-		MockHttpSession second = approvedMentor("owner-two@example.com");
+		MockHttpSession first = scenarios.approvedMentor("owner-one@example.com").session();
+		MockHttpSession second = scenarios.approvedMentor("owner-two@example.com").session();
 
 		mvc.perform(put("/api/mentor-profiles/me").session(first)
 				.contentType(MediaType.APPLICATION_JSON).content(COMPLETE_PROFILE))
@@ -223,46 +221,4 @@ class MentorProfileFlowTests {
 				.andExpect(jsonPath("$.complete").value(false));
 	}
 
-	/** Signs up, applies, and has the seeded Reviewer approve — returning the Mentor's
-	 * session once the MENTOR role has been granted asynchronously. */
-	private MockHttpSession approvedMentor(String email) throws Exception {
-		MockHttpSession applicant = signUpAndLogIn(email);
-		String applicationId = applyAndReturnId(applicant);
-
-		MockHttpSession reviewer = logIn(REVIEWER_EMAIL, REVIEWER_PASSWORD);
-		mvc.perform(post("/api/reviewer/applications/{id}/start-review", applicationId).session(reviewer))
-				.andExpect(status().isOk());
-		mvc.perform(post("/api/reviewer/applications/{id}/approve", applicationId).session(reviewer))
-				.andExpect(status().isOk());
-
-		await().atMost(TIMEOUT).untilAsserted(() -> mvc.perform(get("/api/mentor-profiles/me").session(applicant))
-				.andExpect(status().isOk()));
-		return applicant;
-	}
-
-	private String applyAndReturnId(MockHttpSession session) throws Exception {
-		MvcResult result = mvc.perform(post("/api/mentor-applications").session(session))
-				.andExpect(status().isCreated())
-				.andReturn();
-		return JsonPath.read(result.getResponse().getContentAsString(), "$.id");
-	}
-
-	private MockHttpSession signUpAndLogIn(String email) throws Exception {
-		mvc.perform(post("/api/auth/signup").contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{"email":"%s","password":"password1","dateOfBirth":"1990-01-01"}
-						""".formatted(email)))
-				.andExpect(status().isCreated());
-		return logIn(email, "password1");
-	}
-
-	private MockHttpSession logIn(String email, String password) throws Exception {
-		MvcResult result = mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{"email":"%s","password":"%s"}
-						""".formatted(email, password)))
-				.andExpect(status().isOk())
-				.andReturn();
-		return (MockHttpSession) result.getRequest().getSession(false);
-	}
 }
