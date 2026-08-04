@@ -54,14 +54,16 @@ class MentorshipService implements MentorBookability {
 		if (applications.existsByApplicantUserIdAndStatusIn(applicantUserId, BLOCKING)) {
 			throw new DuplicateApplicationException();
 		}
-		MentorApplication application = new MentorApplication(UUID.randomUUID(), applicantUserId, clock.now());
+		int attempt = applications.countByApplicantUserId(applicantUserId) + 1;
+		MentorApplication application = new MentorApplication(UUID.randomUUID(), applicantUserId, attempt,
+				clock.now());
 		return view(applications.save(application));
 	}
 
-	/** The applicant's latest application, or 404 if they have never applied. */
+	/** The applicant's current application, or 404 if they have never applied. */
 	@Transactional(readOnly = true)
 	MentorApplicationView myApplication(UUID applicantUserId) {
-		return applications.findFirstByApplicantUserIdOrderByCreatedAtDesc(applicantUserId)
+		return MentorApplication.current(applications.findByApplicantUserId(applicantUserId))
 				.map(this::view)
 				.orElseThrow(ApplicationNotFoundException::new);
 	}
@@ -110,7 +112,7 @@ class MentorshipService implements MentorBookability {
 	@Override
 	@Transactional(readOnly = true)
 	public boolean isBookable(UUID mentorUserId) {
-		return applications.findFirstByApplicantUserIdOrderByCreatedAtDesc(mentorUserId)
+		return MentorApplication.current(applications.findByApplicantUserId(mentorUserId))
 				.map(this::isBookable)
 				.orElse(false);
 	}

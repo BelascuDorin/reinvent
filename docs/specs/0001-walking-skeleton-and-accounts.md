@@ -228,8 +228,8 @@ slice, so later specs implement them without re-architecting:
   guardian-consent status). Session-based auth (HTTP-only cookie); Nuxt SSR reads
   the session server-side.
 - **Consent**: resolve a consent link to its context (minor + what is being
-  consented to); submit consent (idempotent for the same link; rejects reused/
-  expired links).
+  consented to); submit consent (rejects reused or expired links explicitly —
+  see the amendment below).
 - **Mentor application**: submit application; get my application status.
 - **Reviewer**: list application queue; transition an application (pick up →
   under review, approve, reject-with-reason); suspend a Mentor. Guarded to the
@@ -297,3 +297,32 @@ Guardian consent, Mentor application, Reviewer, etc.) — never "account", "memb
   (video-only, no free-form messaging).
 - The bookability predicate and the four ports are intentionally defined ahead of
   their consumers — they are the extension points the next specs snap into.
+
+## Amendments
+
+Recorded after implementation, where the spec as written was ambiguous or has been
+superseded by a later spec.
+
+- **A reused consent link is rejected, not idempotent** (decided while building
+  ticket #4). The API contract above originally read "idempotent for the same link;
+  rejects reused/expired links", which contradicts itself: idempotency means a
+  second submission silently succeeds, and rejection means it does not. Story 16 is
+  the tie-breaker — a Guardian wants a used link to "fail safely rather than
+  silently do nothing", so they know to request a fresh one. Submitting an
+  already-used link therefore returns **409 Conflict**
+  (`ConsentLinkAlreadyUsedException`), and an expired one fails the same way. The
+  consent itself remains a single event: the minor's state flips once, so replaying
+  the link can never grant consent twice.
+- **The Mentor application carries a headline and bio** (decided while building
+  spec 0002 ticket #12). Out of Scope above excludes "rich Mentor profile fields
+  … beyond what the application/role model needs" — spec 0002 established the
+  need, since it seeds a Mentor's draft profile from their application so an
+  approved Mentor does not start from a blank page. Headline and bio are collected
+  at application time; the remaining presentation fields (price, languages,
+  employer, Meeting duration, Field(s)) stay out of the application and belong to
+  the Mentor profile editor.
+- **A Reviewer can lift a suspension** (decided while building spec 0002 ticket
+  #13). Story 29 gave a Reviewer the power to suspend an approved Mentor but never
+  the reverse, which left spec 0002's story 24 ("if my suspension is lifted I
+  don't have to rebuild it") unreachable. Suspension is now two-way, and remains
+  distinct from application status: a suspended Mentor is still APPROVED.

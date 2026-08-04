@@ -1,6 +1,9 @@
 package com.reinvent.mentorship.internal;
 
 import java.time.Instant;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.Optional;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
@@ -36,6 +39,10 @@ class MentorApplication {
 	@Column(nullable = false)
 	private boolean suspended;
 
+	/** Which attempt this is for the applicant: their first application is 1. */
+	@Column(nullable = false)
+	private int attempt;
+
 	@Column(name = "created_at", nullable = false)
 	private Instant createdAt;
 
@@ -46,13 +53,35 @@ class MentorApplication {
 		// for JPA
 	}
 
-	MentorApplication(UUID id, UUID applicantUserId, Instant now) {
+	MentorApplication(UUID id, UUID applicantUserId, int attempt, Instant now) {
 		this.id = id;
 		this.applicantUserId = applicantUserId;
+		this.attempt = attempt;
 		this.status = ApplicationStatus.APPLIED;
 		this.suspended = false;
 		this.createdAt = now;
 		this.updatedAt = now;
+	}
+
+	/**
+	 * The one that counts out of a User's application history — the single definition of
+	 * "where this User stands", so no two callers can disagree.
+	 *
+	 * <p>A User may hold at most one application that is not rejected (the database
+	 * enforces it), and that one is always the current one: it is either still being
+	 * decided or it is the approval they are living under. Only once every attempt has
+	 * been rejected does recency matter, and then it is the latest attempt — never the
+	 * timestamp, which several applications can share.
+	 */
+	static Optional<MentorApplication> current(Collection<MentorApplication> history) {
+		return history.stream()
+				.filter(application -> application.status != ApplicationStatus.REJECTED)
+				.findFirst()
+				.or(() -> history.stream().max(Comparator.comparingInt(MentorApplication::attempt)));
+	}
+
+	int attempt() {
+		return attempt;
 	}
 
 	UUID id() {

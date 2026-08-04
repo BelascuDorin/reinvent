@@ -1,7 +1,7 @@
 package com.reinvent.mentorship.internal;
 
 import java.util.Collection;
-import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -41,11 +41,11 @@ class MentorDiscoverability {
 	}
 
 	/**
-	 * Whether this User is an active Mentor right now, read from their latest application
-	 * (a rejected User may have reapplied, so older rows are history).
+	 * Whether this User is an active Mentor right now, read from their current
+	 * application (a rejected User may have reapplied, so older rows are history).
 	 */
 	private boolean isActiveMentor(UUID userId) {
-		return applications.findFirstByApplicantUserIdOrderByCreatedAtDesc(userId)
+		return MentorApplication.current(applications.findByApplicantUserId(userId))
 				.map(MentorApplication::isActiveMentor)
 				.orElse(false);
 	}
@@ -53,17 +53,17 @@ class MentorDiscoverability {
 	/**
 	 * Which of these Users are active Mentors — the same rule as
 	 * {@link #isActiveMentor(UUID)}, asked about a batch in one query so listing many
-	 * Mentors doesn't cost a query each.
+	 * Mentors doesn't cost a query each. Each User's history is reduced by the same
+	 * {@link MentorApplication#current(Collection)} rule.
 	 */
 	Set<UUID> activeMentorsAmong(Collection<UUID> userIds) {
 		if (userIds.isEmpty()) {
 			return Set.of();
 		}
-		Map<UUID, MentorApplication> latest = new HashMap<>();
-		for (MentorApplication application : applications.findByApplicantUserIdInOrderByCreatedAtDesc(userIds)) {
-			latest.putIfAbsent(application.applicantUserId(), application);
-		}
-		return latest.values().stream()
+		Map<UUID, List<MentorApplication>> histories = applications.findByApplicantUserIdIn(userIds).stream()
+				.collect(Collectors.groupingBy(MentorApplication::applicantUserId));
+		return histories.values().stream()
+				.flatMap(history -> MentorApplication.current(history).stream())
 				.filter(MentorApplication::isActiveMentor)
 				.map(MentorApplication::applicantUserId)
 				.collect(Collectors.toSet());
