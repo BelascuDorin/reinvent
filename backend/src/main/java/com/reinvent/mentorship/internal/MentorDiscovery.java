@@ -9,16 +9,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Public Mentor discovery (spec 0002): the read-side a visitor with no account browses
- * and searches. Its one rule is who is worth showing — a Mentor is <em>discoverable</em>
- * iff their application is approved and not suspended and their profile is complete.
- * Payment onboarding is deliberately not consulted: that is {@link MentorBookability}'s
- * concern at booking time, which makes discovery the weaker predicate of the two.
- *
- * <p>Both halves of the rule are asked of the objects that own them —
- * {@link MentorProfile#isComplete()} and {@link MentorApplication#isActiveMentor()} —
- * rather than restated as a query, so there is exactly one definition of each. The
- * search criteria (Field, language) are all that the database filters on.
+ * Public Mentor discovery (spec 0002): the read-side a visitor with no account browses,
+ * searches, and reads a single profile from. Who is worth showing is not decided here —
+ * {@link MentorDiscoverability} owns that rule and this asks it — and it is deliberately
+ * never restated as a query, so the database filters only on the search criteria (Field,
+ * language) and the rule keeps one definition.
  */
 @Service
 @Transactional(readOnly = true)

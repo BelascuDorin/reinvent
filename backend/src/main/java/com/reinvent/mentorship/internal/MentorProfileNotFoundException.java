@@ -13,14 +13,16 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 @ResponseStatus(HttpStatus.NOT_FOUND)
 class MentorProfileNotFoundException extends RuntimeException {
 
-	MentorProfileNotFoundException() {
-		super("You do not have a Mentor profile.");
-	}
-
 	private MentorProfileNotFoundException(String message) {
 		super(message);
 	}
 
+	/** The caller has no Mentor profile of their own — they were never approved. */
+	static MentorProfileNotFoundException mine() {
+		return new MentorProfileNotFoundException("You do not have a Mentor profile.");
+	}
+
+	/** Nothing is publicly available under that identifier, for whatever reason. */
 	static MentorProfileNotFoundException notPubliclyAvailable() {
 		return new MentorProfileNotFoundException("No Mentor profile is available.");
 	}

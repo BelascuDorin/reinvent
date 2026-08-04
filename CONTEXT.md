@@ -110,6 +110,15 @@ The public presentation of a Mentor: display name, current role/title, Field(s),
 bio, experience, languages, price, Meeting duration, open Slots, and rating
 summary. Employer is optional.
 
+**Discoverable**:
+Whether Reinvent shows a Mentor to the public at all — true only while their
+Mentor application is approved and not suspended _and_ their Mentor profile is
+complete (at least one Field, a price, and a Meeting duration). Completeness is
+the switch; there is no separate publish step. Deliberately weaker than being
+bookable, which additionally requires payment onboarding: a Mentee may find a
+Mentor before that Mentor can take money.
+_Avoid_: Published, live, listed, active
+
 **Meeting brief**:
 A short, structured note a Mentee writes at booking describing what they want to
 discuss. It is the only Mentee-authored text a Mentor sees before the Meeting —

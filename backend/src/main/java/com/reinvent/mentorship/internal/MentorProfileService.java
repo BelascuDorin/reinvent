@@ -46,7 +46,7 @@ class MentorProfileService {
 	/** The caller's own profile, or 404 if they were never approved as a Mentor. */
 	@Transactional(readOnly = true)
 	MentorProfileView myProfile(UUID userId) {
-		MentorProfile profile = profiles.findById(userId).orElseThrow(MentorProfileNotFoundException::new);
+		MentorProfile profile = profiles.findById(userId).orElseThrow(MentorProfileNotFoundException::mine);
 		return view(profile);
 	}
 
@@ -58,7 +58,7 @@ class MentorProfileService {
 	 * which flips live with no separate publish step.
 	 */
 	MentorProfileView updateMyProfile(UUID userId, UpdateMentorProfileRequest edit) {
-		MentorProfile profile = profiles.findById(userId).orElseThrow(MentorProfileNotFoundException::new);
+		MentorProfile profile = profiles.findById(userId).orElseThrow(MentorProfileNotFoundException::mine);
 		if (!fieldCatalog.containsAll(edit.fieldSlugs())) {
 			throw new UnknownFieldException();
 		}
@@ -74,7 +74,7 @@ class MentorProfileService {
 	 */
 	@Transactional(readOnly = true)
 	MentorPublicProfileView previewMyProfile(UUID userId) {
-		MentorProfile profile = profiles.findById(userId).orElseThrow(MentorProfileNotFoundException::new);
+		MentorProfile profile = profiles.findById(userId).orElseThrow(MentorProfileNotFoundException::mine);
 		return MentorPublicProfileView.of(profile);
 	}
 

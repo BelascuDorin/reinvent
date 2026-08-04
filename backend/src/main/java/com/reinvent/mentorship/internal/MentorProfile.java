@@ -21,7 +21,8 @@ import jakarta.persistence.Table;
  * <em>complete</em> — the profile-local half of discoverability — once it has at
  * least one Field, a price, and a Meeting duration. Whether the Mentor is actually
  * discoverable additionally depends on the application being approved and not
- * suspended, which the service composes (that state lives on {@link MentorApplication}).
+ * suspended; {@link MentorDiscoverability} composes the two halves (that state lives
+ * on {@link MentorApplication}).
  */
 @Entity
 @Table(name = "mentor_profile")

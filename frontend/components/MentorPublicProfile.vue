@@ -15,9 +15,10 @@ const fieldName = (slug: string) => fields?.find((field) => field.slug === slug)
 <template>
   <article>
     <h1>{{ profile.displayName ?? 'A Mentor' }}</h1>
-    <p v-if="profile.roleTitle">
-      {{ profile.roleTitle }}<span v-if="profile.employer"> at {{ profile.employer }}</span>
-    </p>
+    <!-- Employer stands on its own: a Mentor may set it without a role/title, and
+         completeness doesn't require either, so neither may hide the other. -->
+    <p v-if="profile.roleTitle">{{ profile.roleTitle }}</p>
+    <p v-if="profile.employer">{{ profile.employer }}</p>
 
     <p>{{ profile.priceAmount }} {{ profile.priceCurrency }} · {{ profile.meetingDurationMinutes }} minute Meeting</p>
 

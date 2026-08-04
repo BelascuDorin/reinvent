@@ -196,7 +196,10 @@ async function save() {
     </section>
 
     <section v-if="preview">
-      <h2>What Mentees will see</h2>
+      <!-- Honest about tense: while the Mentor isn't discoverable, Mentees can't reach
+           this page at all, so don't claim they're seeing it. -->
+      <h2 v-if="profile?.discoverable">What Mentees see</h2>
+      <h2 v-else>What Mentees will see once you're discoverable</h2>
       <MentorPublicProfile :profile="preview" :fields="fields" />
     </section>
 
